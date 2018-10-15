@@ -107,3 +107,6 @@ venv.bak/
 bin/
 include/
 pip-selfcheck.json
+
+# PyCharm Files
+.idea/
