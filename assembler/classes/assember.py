@@ -73,7 +73,7 @@ class Assembler():
                 if line.strip()[0] == "#":
                     # Ignore full line comments
                     continue
-                operation, operand = line.strip().split(" ")[0], line.strip().split(" ", 1)[1]
+                operation, operand = line.strip().split(" ")[0], line.strip().split(" ", 1)[1].split("#")[0]
                 instruction = []
                 instruction.append(operation)
                 for part in operand.split(","):
