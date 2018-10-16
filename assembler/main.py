@@ -11,7 +11,7 @@ def main(args):
     :return: Machine code written to output or stdout if None specified.
     """
     assembler = Assembler(args.file, args.output)
-    assembler.output()
+    assembler.first_pass()
 
 
 if __name__ == "__main__":
