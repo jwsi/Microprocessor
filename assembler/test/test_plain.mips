@@ -1,10 +1,11 @@
 	.data
-
-int_array:  .word 10, 11, 12
-x: .word 5
-test: .word 5, 6, 7
+int_array:  .word 10, 11, 12 # here is an int array
+x:          .word 5
+test:       .word 5, 6, 7
 
 	.text
 
 main:
-	la $s0, int_array
+	lw $t0, int_array
+
+    sw $t0,   test
