@@ -8,3 +8,7 @@ main: # Hello
     # Hello
 	lw $t0, int_array
     sw $t0, x # Hello
+    beq $0, $0, loop
+
+loop:
+    lw $t0, 0
