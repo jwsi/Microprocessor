@@ -1,5 +1,6 @@
 import classes.errors as errors
 from classes.instruction import Instruction
+import re
 
 
 class Assembler():
@@ -11,7 +12,7 @@ class Assembler():
     output_file = None
 
     # Define memory dictionary which will be dumped into machine code.
-    next_address = 0
+    next_address = 64 # Reserve first 64 for registers etc...
     memory = dict()
     labels = dict()
     instructions = []
@@ -141,7 +142,7 @@ class Assembler():
         print("label converted instructions")
         raw_instructions = []
         for instruction in self.instructions:
-            raw_instruction = instruction[0:2] + list(map(lambda x: self.replace_label(x), instruction[2:]))
+            raw_instruction = instruction[0:2] + list(map(lambda x: self.replace_parameter(x), instruction[2:]))
             raw_instructions.append(raw_instruction)
             print(raw_instruction)
         # Now we can remove all references to labels
@@ -152,24 +153,45 @@ class Assembler():
             self.insert_instruction(instruction)
 
 
-
-    def replace_label(self, label):
+    def replace_parameter(self, parameter):
         """
-        Parses each instruction argument and returns the label address if found.
+        Replaces each instruction parameter with a decoded version and a memory offset.
         Otherwise return x.
-        :param label: instruction parameter (potential label).
+        :param parameter: instruction parameter (potential label).
         :return: label address or original x.
         """
-        if "$" in label:
-            return label
-        try:
-            return int(label)
+        parameter, offset = self.decode_parameter(parameter)
+        try: # Register & immediate conversion
+            return int(parameter), offset
         except ValueError:
             pass
-        try:
-            return self.labels[label]
+        try: # Label conversion
+            return self.labels[parameter], offset
         except KeyError:
-            raise errors.InvalidLabel(label)
+            raise errors.InvalidLabel(parameter)
+
+
+    def decode_parameter(self, parameter):
+        """
+        Decodes instruction parameters.
+        :param parameter: instruction parameter.
+        :return: parameter interpretation with associated memory offset.
+        """
+        result = re.search('([0-9]*?)\(*\$*([A-Za-z0-9]*)\)*', parameter)
+        offset = int(result.group(1) or 0)
+        parameter = result.group(2)
+        print(parameter)
+        if parameter in ["0", "zero"]: # Check for zero register
+            return 0, 0
+        elif parameter[0] == 't': # Check for temp register
+            number = int(parameter[1])
+            if number <= 7:
+                return (number + 8), offset
+            else:
+                return (number + 16), offset
+        else: # Otherwise it's a label or immediate
+            return parameter, offset
+
 
 
 
