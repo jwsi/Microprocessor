@@ -42,7 +42,6 @@ class Opcode():
         "beq"  : (Type.I,  4, None),
         "bne"  : (Type.I,  5, None),
         "j"    : (Type.J,  2, None),
-        "noop" : (Type.R,  0, 0   ),
         "jal"  : (Type.J,  3, None),
         "jr"   : (Type.R,  0, 8   )
     }
