@@ -11,7 +11,7 @@ main: # Hello
 	# blez 1, 3
 	# beq 1, 2, 4
 	# lw $t1, x
-	addi $t0, $t1, 256
+	addi $t0, $t1, $t0
 
 	# lw $t0, int_array
     # sw $t0, x # Hello

@@ -177,10 +177,11 @@ class Assembler():
         :param parameter: instruction parameter.
         :return: parameter interpretation with associated memory offset.
         """
-        result = re.search('([0-9]*?)\(*\$*([A-Za-z0-9]*)\)*', parameter)
+        result = re.search('([0-9]*)\(*\$*([A-Za-z0-9]*)\)*', parameter)
         offset = int(result.group(1) or 0)
         parameter = result.group(2)
-        print(parameter)
+        if not bool(parameter): # If parameter is not found then it's an immediate and offset should be used.
+            return offset, 0
         if parameter in ["0", "zero"]: # Check for zero register
             return 0, 0
         elif parameter[0] == 't': # Check for temp register
