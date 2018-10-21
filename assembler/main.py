@@ -13,6 +13,7 @@ def main(args):
     assembler = Assembler(args.file, args.output)
     assembler.first_pass()
     assembler.second_pass()
+    assembler.output()
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 import classes.errors as errors
 from classes.instruction import Instruction
-import re
+import re, json
 
 
 class Assembler():
@@ -36,10 +36,12 @@ class Assembler():
         Outputs calculated machine code to the requested destination.
         """
         if self.output_file is None:
-            print("assembly")
+            print(self.memory)
+            print(self.main)
         else:
             f = open(self.output_file, 'w')
-            f.write("assembly")
+            f.write(json.dumps(self.memory)+"\n")
+            f.write(json.dumps(self.main))
             f.close()
 
 
@@ -69,8 +71,12 @@ class Assembler():
         This inserts instructions into the memory dictionary.
         :param instruction: list containing parts of the instruction.
         """
-        instruction = Instruction(instruction)
-        # parts = instruction.description()
+        byte_instruction = Instruction(instruction).parse()
+        self.memory[self.next_address] = byte_instruction[0]
+        self.memory[self.next_address+1] = byte_instruction[1]
+        self.memory[self.next_address+2] = byte_instruction[2]
+        self.memory[self.next_address+3] = byte_instruction[3]
+        self.next_address += 4
 
 
     def build_data(self, data_segment):
@@ -84,7 +90,6 @@ class Assembler():
                     # Ignore full line comments
                     continue
                 label, operand = line.split(":")[0], line.split(":")[1].strip().split("#")[0]
-                print(label + " " + operand)
                 self.insert_data(label, operand)
 
 
@@ -105,13 +110,10 @@ class Assembler():
                     # Ignore full line comments
                     continue
                 operation, operand = line.strip().split(" ")[0], line.strip().split(" ", 1)[1].split("#")[0]
-                instruction = [self.next_address]
-                instruction.append(operation)
+                instruction= [operation]
                 for part in operand.split(","):
                     instruction.append(part.strip())
                 self.instructions.append(instruction)
-                self.next_address += 4
-                print(instruction)
 
 
     def first_pass(self):
@@ -119,34 +121,22 @@ class Assembler():
         Allocates memory for data & instructions.
         Also identifies labels and associated addresses.
         """
-        print("variables")
         data_segment = self.assembly.split(".data")[1].split(".text")[0].split("\n")
         self.build_data(data_segment)
-        print()
-        print("memory")
-        print(self.memory)
-        print()
-        print("instructions")
         instruction_segment = self.assembly.split(".text")[1].split("\n")
         self.build_instructions(instruction_segment)
-        print()
-        print("labels")
-        print(self.labels)
 
 
     def second_pass(self):
         """
         Converts label names to addresses
         """
-        print()
-        print("label converted instructions")
         raw_instructions = []
         for instruction in self.instructions:
-            raw_instruction = instruction[0:2] + list(map(lambda x:
-                                                          self.replace_parameter(x),
-                                                          instruction[2:]))
+            raw_instruction = [instruction[0]] + list(map(lambda x:
+                                                        self.replace_parameter(x),
+                                                        instruction[1:]))
             raw_instructions.append(raw_instruction)
-            print(raw_instruction)
         # Now we can remove all references to labels
         self.labels = None
         # Change the instructions to raw format

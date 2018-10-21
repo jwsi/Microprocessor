@@ -16,7 +16,6 @@ class Instruction():
         :param instruction: Incoming list containing assembly instruction parts.
         """
         self.instruction = instruction
-        self.parse()
 
 
     def parse(self):
@@ -24,7 +23,7 @@ class Instruction():
         This function parses the assembly instruction object.
         :return: MIPS instruction object.
         """
-        type, opcode, function = Opcode(self.instruction[1]).decode()
+        type, opcode, function = Opcode(self.instruction[0]).decode()
 
         if type == Type.R:
             instruction = self.r_instruction(function)
@@ -32,7 +31,6 @@ class Instruction():
             instruction = self.i_instruction(opcode)
         elif type == Type.J:
             instruction = self.j_instruction(opcode)
-        print(instruction)
         return instruction
 
 
@@ -44,18 +42,18 @@ class Instruction():
         """
         rs, rt, rd, shift, stage = 0, 0, 0, 0, 1 # By default set a no-op
         try:
-            p1, o1 = self.instruction[2]
+            p1, o1 = self.instruction[1]
             stage = 2
-            p2, o2 = self.instruction[3]
+            p2, o2 = self.instruction[2]
             stage = 3
-            p3, o3 = self.instruction[4]
+            p3, o3 = self.instruction[3]
         except IndexError: # Check instruction format.
             if function == 8 and stage == 2:
                 pass # JR only takes 1 parameter.
             elif function in [24, 26] and stage == 3:
                 pass # Multiply & Divide only take 2 parameters as there is no destination register.
             else:
-                raise InvalidInstructionFormat(self.instruction[1]) # Incorrect instruction format
+                raise InvalidInstructionFormat(self.instruction[0]) # Incorrect instruction format
         # Re order parameters
         if function in [24, 26]:
             rs, rt = p1, p2
@@ -81,16 +79,16 @@ class Instruction():
         """
         rs, rt, imm, stage = 0, 0, 0, 1  # By default set a no-op
         try:
-            p1, o1 = self.instruction[2]
+            p1, o1 = self.instruction[1]
             stage = 2
-            p2, o2 = self.instruction[3]
+            p2, o2 = self.instruction[2]
             stage = 3
-            p3, o3 = self.instruction[4]
+            p3, o3 = self.instruction[3]
         except IndexError:
             if opcode in [6, 7, 15, 35, 43] and stage == 3:
                 pass # LW, SW, BGTZ, LUI & BLEZ only take two params.
             else:
-                raise InvalidInstructionFormat(self.instruction[1])  # Incorrect instruction format
+                raise InvalidInstructionFormat(self.instruction[0])  # Incorrect instruction format
 
         # Re order parameters
         if opcode in [6, 7]: # BGTZ & BLEZ only take source and imm.
@@ -117,9 +115,9 @@ class Instruction():
 
     def j_instruction(self, opcode):
         try:
-            addr, _ = self.instruction[2]
+            addr, _ = self.instruction[1]
         except IndexError:
-            raise InvalidInstructionFormat(self.instruction[1])
+            raise InvalidInstructionFormat(self.instruction[0])
         byte_list = ["{0:06b}".format(opcode) + "{0:026b}".format(addr)[0:2]]
         byte_list.append("{0:026b}".format(addr)[2:10])
         byte_list.append("{0:026b}".format(addr)[10:18])
