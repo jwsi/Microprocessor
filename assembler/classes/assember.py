@@ -12,7 +12,7 @@ class Assembler():
     output_file = None
 
     # Define memory dictionary which will be dumped into machine code.
-    next_address = 64 # Reserve first 64 for registers etc...
+    next_address = 32 # Reserve first 64 for registers etc...
     memory = dict()
     labels = dict()
     instructions = []
@@ -142,7 +142,9 @@ class Assembler():
         print("label converted instructions")
         raw_instructions = []
         for instruction in self.instructions:
-            raw_instruction = instruction[0:2] + list(map(lambda x: self.replace_parameter(x), instruction[2:]))
+            raw_instruction = instruction[0:2] + list(map(lambda x:
+                                                          self.replace_parameter(x),
+                                                          instruction[2:]))
             raw_instructions.append(raw_instruction)
             print(raw_instruction)
         # Now we can remove all references to labels
@@ -177,13 +179,13 @@ class Assembler():
         :param parameter: instruction parameter.
         :return: parameter interpretation with associated memory offset.
         """
-        result = re.search('([0-9]*)\(*\$*([A-Za-z0-9]*)\)*', parameter)
+        result = re.search('([0-9]*)\(*\$*([A-Za-z0-9_]*)\)*', parameter)
         offset = int(result.group(1) or 0)
         parameter = result.group(2)
         if not bool(parameter): # If parameter is not found then it's an immediate and offset should be used.
             return offset, 0
         if parameter in ["0", "zero"]: # Check for zero register
-            return 0, 0
+            return 0, offset
         elif parameter[0] == 't': # Check for temp register
             number = int(parameter[1])
             if number <= 7:
