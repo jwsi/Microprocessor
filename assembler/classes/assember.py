@@ -36,8 +36,16 @@ class Assembler():
         Outputs calculated machine code to the requested destination.
         """
         if self.output_file is None:
-            print(self.memory)
-            print(self.main)
+            print("memory:")
+            for word in range(int(len(self.memory)/4)):
+                if 32+4*word == self.main:
+                    print("instructions:")
+                print(str(32+4*word) + " "
+                      + self.memory[32+4*word] + " "
+                      + self.memory[32+4*word+1] + " "
+                      + self.memory[32+4*word+2] + " "
+                      + self.memory[32+4*word+3])
+            print("main address: " + str(self.main))
         else:
             f = open(self.output_file, 'w')
             f.write(json.dumps(self.memory)+"\n")
@@ -58,25 +66,24 @@ class Assembler():
             parameters = operand.split(".word")[1].split(",")
             for parameter in parameters:
                 parameter = int(parameter.strip())
-                hex = parameter.to_bytes(4, byteorder="little", signed=True).hex()
-                self.memory[self.next_address  ] = "{0:08b}".format(int(hex[0:2], 16))
-                self.memory[self.next_address+1] = "{0:08b}".format(int(hex[2:4], 16))
-                self.memory[self.next_address+2] = "{0:08b}".format(int(hex[4:6], 16))
-                self.memory[self.next_address+3] = "{0:08b}".format(int(hex[6:8], 16))
+                binary_parameter = "{0:032b}".format(parameter)
+                self.memory[self.next_address  ] = binary_parameter[0:8]
+                self.memory[self.next_address+1] = binary_parameter[8:16]
+                self.memory[self.next_address+2] = binary_parameter[16:24]
+                self.memory[self.next_address+3] = binary_parameter[24:]
                 self.next_address += 4
 
 
-    def insert_instruction(self, instruction):
+    def insert_instruction(self, address, instruction):
         """
         This inserts instructions into the memory dictionary.
         :param instruction: list containing parts of the instruction.
         """
         byte_instruction = Instruction(instruction).parse()
-        self.memory[self.next_address] = byte_instruction[0]
-        self.memory[self.next_address+1] = byte_instruction[1]
-        self.memory[self.next_address+2] = byte_instruction[2]
-        self.memory[self.next_address+3] = byte_instruction[3]
-        self.next_address += 4
+        self.memory[address] = byte_instruction[0]
+        self.memory[address+1] = byte_instruction[1]
+        self.memory[address+2] = byte_instruction[2]
+        self.memory[address+3] = byte_instruction[3]
 
 
     def build_data(self, data_segment):
@@ -110,10 +117,11 @@ class Assembler():
                     # Ignore full line comments
                     continue
                 operation, operand = line.strip().split(" ")[0], line.strip().split(" ", 1)[1].split("#")[0]
-                instruction= [operation]
+                address, instruction=self.next_address, [operation]
                 for part in operand.split(","):
                     instruction.append(part.strip())
-                self.instructions.append(instruction)
+                self.instructions.append((address, instruction))
+                self.next_address += 4
 
 
     def first_pass(self):
@@ -132,17 +140,17 @@ class Assembler():
         Converts label names to addresses
         """
         raw_instructions = []
-        for instruction in self.instructions:
+        for address, instruction in self.instructions:
             raw_instruction = [instruction[0]] + list(map(lambda x:
-                                                        self.replace_parameter(x),
-                                                        instruction[1:]))
-            raw_instructions.append(raw_instruction)
+                                                          self.replace_parameter(x),
+                                                          instruction[1:]))
+            raw_instructions.append((address, raw_instruction))
         # Now we can remove all references to labels
         self.labels = None
         # Change the instructions to raw format
         self.instructions = raw_instructions
-        for instruction in self.instructions:
-            self.insert_instruction(instruction)
+        for address, instruction in self.instructions:
+            self.insert_instruction(address, instruction)
 
 
     def replace_parameter(self, parameter):
@@ -169,7 +177,7 @@ class Assembler():
         :param parameter: instruction parameter.
         :return: parameter interpretation with associated memory offset.
         """
-        result = re.search('([0-9]*)\(*\$*([A-Za-z0-9_]*)\)*', parameter)
+        result = re.search('([-0-9]*)\(*\$*([A-Za-z0-9_]*)\)*', parameter)
         offset = int(result.group(1) or 0)
         parameter = result.group(2)
         if not bool(parameter): # If parameter is not found then it's an immediate and offset should be used.

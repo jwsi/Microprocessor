@@ -48,8 +48,8 @@ class Instruction():
             stage = 3
             p3, o3 = self.instruction[3]
         except IndexError: # Check instruction format.
-            if function == 8 and stage == 2:
-                pass # JR only takes 1 parameter.
+            if function in [8, 16, 18] and stage == 2:
+                pass # JR, MFHI, MFLO only take 1 parameter.
             elif function in [24, 26] and stage == 3:
                 pass # Multiply & Divide only take 2 parameters as there is no destination register.
             else:
@@ -61,6 +61,8 @@ class Instruction():
             rd, rt, shift = p1, p2, p3
         elif function == 8:
             rs = p1
+        elif function in [16, 18]:
+            rd = p1
         else:
             rd, rs, rt = p1, p2, p3
         # Build byte list
@@ -99,10 +101,9 @@ class Instruction():
             rt, imm = p1, p2
         elif opcode in [35, 43]: # LW & SW only takes two params with an offset.
             if p2 >= 32:
-                rt, imm = p1, p2 # Load from variable
+                rt, imm = p1, (p2+o2) # Load from variable
             else:
                 rt, rs, imm = p1, p2, o2 # Load address from register with offset
-
         else:
             rt, rs, imm = p1, p2, p3
         # Build byte list
@@ -114,6 +115,11 @@ class Instruction():
 
 
     def j_instruction(self, opcode):
+        """
+        Given an opcode this function will build a J instruction.
+        :param opcode: opcode of instruction.
+        :return: List of byte strings representing instruction ready to insert into memory.
+        """
         try:
             addr, _ = self.instruction[1]
         except IndexError:
