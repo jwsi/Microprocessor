@@ -1,7 +1,8 @@
-	.data
-x:          .word 5 # Define x here
+	.data # This is the data part
+x:         .word 5       # Define x here
+int_array: .word 1, 2, 3 # Define an array of ints here.
 
-	.text # This is the instruction bit
+	.text # This is the instruction part
 
 main:
 	# Load Instructions
@@ -10,10 +11,60 @@ main:
 	lw $t0, $t1
 	lw $t0, 48
 	lw $t0, 4($t1)
+	lui $t0, 4
+	lui $t0, x
 	# Store Instructions
 	sw $t0, 4(x)
 	sw $t0, x
 	sw $t0, $t1
 	sw $t0, 48
 	sw $t0, 4($t1)
-	# mfhi $t0
+	# ALU Regular Instructions
+	add $t0, $t1, $t2
+	or $t0, $t1, $t2
+	xor $t0, $t1, $t2
+	and $t0, $t1, $t2
+	sub $t0, $t1, $t2
+	nor $t0, $t1, $t2
+	slt $t0, $t1, $t2
+	# ALU Immediate Instructions
+	addi $t0, $t1, 4
+	ori $t0, $t1, 4
+	xori $t0, $t1, 4
+	andi $t0, $t1, 4
+	slti $t0, $t1, 4
+	addi $t0, $t1, -8
+	ori $t0, $t1, -8
+	xori $t0, $t1, -8
+	andi $t0, $t1, -8
+	slti $t0, $t1, -8
+	addi $t0, $t1, x
+	ori $t0, $t1, x
+	xori $t0, $t1, x
+	andi $t0, $t1, x
+	slti $t0, $t1, x
+	# Shift Operations
+	sll $zero, $zero, 0 #nop
+	sll $t0, $t1, 2
+	sra $t0, $t1, 2
+	# Multiply & Divide
+	mult $t0, $t1
+	div $t0, $t1
+	mfhi $t0
+	mflo $t0
+	# Jumps
+	j x
+	j 4
+	jal x
+	jal 4
+	jr $t0
+	jr $t1
+	# Branches
+	beq $t0, $t1, 4
+	beq $t0, $t1, -4
+	bne $t0, $t1, 4
+	bne $t0, $t1, -4
+	blez $t0, 4
+	blez $t0, -4
+	bgtz $t0, 4
+	bgtz $t0, -4

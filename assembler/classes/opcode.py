@@ -43,7 +43,9 @@ class Opcode():
         "bne"  : (Type.I,  5, None),
         "j"    : (Type.J,  2, None),
         "jal"  : (Type.J,  3, None),
-        "jr"   : (Type.R,  0, 8   )
+        "jr"   : (Type.R,  0, 8   ),
+        "mfhi" : (Type.R,  0, 16  ),
+        "mflo" : (Type.R,  0, 18  )
     }
 
 
