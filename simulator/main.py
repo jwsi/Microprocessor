@@ -1,0 +1,17 @@
+import argparse
+
+
+def main(args):
+    """
+    Main function spawning the simulator.
+    :param args: Arguments passed to simulator:
+        source file name
+    """
+    pass
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="JW MIPS Simulator")
+    parser.add_argument('file', help="JW machine code file")
+    args = parser.parse_args()
+    main(args)
