@@ -1,0 +1,29 @@
+    .data
+
+# Define 3 vectors
+a: .word 0, 0, 0, 0, 0
+b: .word 1, 2, 3, 4, 5
+c: .word 10, 20, 30, 40, 50
+# Define loop limits
+counter: .word 0
+limit:   .word 20
+
+    .text # We want to compute a = b + c
+
+# Main involcation point
+main:
+    lw $t3, $zero, counter    # Initialise loop counter
+    lw $t4, $zero, limit      # Initialise limit
+# Loop label
+loop:
+    bne $t3, $t4, 2      # If counter != limit then go forward 2 instructions
+    j end                # Otherwise go to the end of the program
+    lw $t1, $t3(b)       # Load b[$t3] into $t1
+    lw $t2, $t3(c)       # Load c[$t3] into $t2
+    add $t0, $t1, $t2    # $t0 = b+c
+    sw $t0, $t3(a)       # Store result back into correct word in a
+    addi $t3, $t3, 4     # Add 4 to the counter
+    j loop
+# Exit point
+end:
+    sll $zero, $zero, 0 # Final nop
