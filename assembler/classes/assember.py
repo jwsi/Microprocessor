@@ -1,6 +1,6 @@
 import classes.errors as errors
 from classes.instruction import Instruction
-import re, json
+import re, pickle
 
 
 class Assembler():
@@ -47,9 +47,9 @@ class Assembler():
                       + self.memory[32+4*word+3])
             print("main address: " + str(self.main))
         else:
-            f = open(self.output_file, 'w')
-            f.write(json.dumps(self.memory)+"\n")
-            f.write(json.dumps(self.main))
+            f = open(self.output_file, "wb")
+            pickle.dump(self.memory, f)
+            pickle.dump(self.main, f)
             f.close()
 
 
