@@ -12,8 +12,8 @@ limit:   .word 20
 
 # Main involcation point
 main:
-    lw $t3, $zero, counter    # Initialise loop counter
-    lw $t4, $zero, limit      # Initialise limit
+    lw $t3, counter    # Initialise loop counter
+    lw $t4, limit      # Initialise limit
 # Loop label
 loop:
     bne $t3, $t4, 2      # If counter != limit then go forward 2 instructions

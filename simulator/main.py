@@ -1,4 +1,5 @@
 import argparse
+from classes.simulator import Simulator
 
 
 def main(args):
@@ -7,7 +8,8 @@ def main(args):
     :param args: Arguments passed to simulator:
         source file name
     """
-    pass
+    simulator = Simulator(args.file)
+    simulator.simulate()
 
 
 if __name__ == "__main__":
