@@ -1,4 +1,6 @@
 import pickle
+from classes.instruction import Instruction
+
 
 class Simulator():
     memory = None
@@ -36,7 +38,8 @@ class Simulator():
         return raw_instruction
 
 
-    def decode(self):
+    def decode(self, raw_instruction):
+        pass
         instruction = Instruction(raw_instruction)
 
     def execute(self):
