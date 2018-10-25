@@ -1,5 +1,6 @@
 import pickle
 from classes.instruction import Instruction
+from classes.execution_unit import ExecutionUnit
 
 
 class Simulator():
@@ -31,6 +32,10 @@ class Simulator():
 
 
     def fetch(self):
+        """
+        This function fetches the appropriate instruction from memory.
+        :return: raw binary instruction (string).
+        """
         raw_instruction = ""
         for i in range(4):
             raw_instruction += self.memory[self.pc+i]
@@ -39,11 +44,21 @@ class Simulator():
 
 
     def decode(self, raw_instruction):
-        pass
-        instruction = Instruction(raw_instruction)
+        """
+        This function decodes the raw instruction into a Instruction object.
+        :param raw_instruction: binary string of MIPS instruction.
+        :return: Instruction object.
+        """
+        return Instruction(raw_instruction)
 
-    def execute(self):
-        pass
+
+    def execute(self, instruction):
+        """
+        This function executes the Instruction object.
+        :param instruction: Instruction object to be executed.
+        """
+        ExecutionUnit(instruction, self.memory)
+
 
     def retire(self):
         pass
@@ -51,9 +66,9 @@ class Simulator():
     def simulate(self):
         raw_instruction = self.fetch()
         self.clock+=1
-        self.decode(raw_instruction)
+        instruction = self.decode(raw_instruction)
         self.clock+=1
-        self.execute()
+        self.execute(instruction)
         self.clock+=1
         self.retire()
         self.clock+=1

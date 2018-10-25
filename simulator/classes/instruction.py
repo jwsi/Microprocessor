@@ -1,4 +1,4 @@
-from classes.opcode import Opcode
+from classes.opcode import Opcode, Type
 
 class Instruction():
     """
@@ -36,4 +36,43 @@ class Instruction():
         if opcode == "000000":
             function = int(self.raw_instruction[26:32], 2)
         self.name, self.type = Opcode(opcode, function).decode()
-        print(self.name)
+        self._decode_operands()
+
+
+    def _decode_operands(self):
+        """
+        This function decodes operands based on the instruction type.
+        """
+        if self.type == Type.R:
+            self._decode_r_operands()
+        elif self.type == Type.I:
+            self._decode_i_operands()
+        elif self.type == Type.J:
+            self._decode_j_operands()
+
+
+    def _decode_r_operands(self):
+        """
+        Decodes R type operands.
+        """
+        self.rs = int(self.raw_instruction[6:11], 2)
+        self.rt = int(self.raw_instruction[11:16], 2)
+        self.rd = int(self.raw_instruction[16:21], 2)
+        self.shift = int(self.raw_instruction[21:26], 2)
+
+
+    def _decode_i_operands(self):
+        """
+        Decodes I type operands.
+        """
+        self.rs = int(self.raw_instruction[6:11], 2)
+        self.rt = int(self.raw_instruction[11:16], 2)
+        self.imm = int(self.raw_instruction[16:32], 2)
+
+
+    def _decode_j_operands(self):
+        """
+        Decodes J type operands.
+        """
+        self.address = int(self.raw_instruction[6:32])
+
