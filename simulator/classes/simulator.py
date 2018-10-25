@@ -57,13 +57,14 @@ class Simulator():
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
-        ExecutionUnit(instruction, self.memory)
+        ExecutionUnit(instruction, self.memory).execute()
 
 
     def retire(self):
         pass
 
     def simulate(self):
+        self.pc+=4
         raw_instruction = self.fetch()
         self.clock+=1
         instruction = self.decode(raw_instruction)
