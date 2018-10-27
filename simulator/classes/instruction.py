@@ -33,7 +33,7 @@ class Instruction():
         """
         opcode = int(self.raw_instruction[0:6], 2)
         function = None
-        if opcode == "000000":
+        if opcode == 0:
             function = int(self.raw_instruction[26:32], 2)
         self.name, self.type = Opcode(opcode, function).decode()
         self._decode_operands()
@@ -74,5 +74,5 @@ class Instruction():
         """
         Decodes J type operands.
         """
-        self.address = int(self.raw_instruction[6:32])
+        self.address = int(self.raw_instruction[6:32], 2)
 

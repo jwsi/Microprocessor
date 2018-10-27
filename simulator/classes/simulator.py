@@ -9,16 +9,23 @@ class Simulator():
 
     clock = 0
 
-    # Registers
-    zero = 0 # register 0
-    v0, v1 = 0, 0 # registers 2 to 3
-    a0, a1, a2, a3 = 0, 0, 0, 0 # registers 4 to 7
-    t0, t1, t2, t3, t4, t5, t6, t7 = 0, 0, 0, 0, 0, 0, 0, 0 # registers 8 to 15
-    s0, s1, s2, s3, s4, s5, s6, s7 = 0, 0, 0, 0, 0, 0, 0, 0 # registers 16 to 23
-    t8, t9 = 0, 0 # registers 24 to 25
-    sp = 0 # register 29
-    ra = 0 # register 31
-
+    reg = {
+        0: ["zero", 0],
+        8: ["t0", 0],
+        9: ["t1", 0],
+        10: ["t2", 0],
+        11: ["t3", 0],
+        12: ["t4", 0],
+        13: ["t5", 0],
+        14: ["t6", 0],
+        15: ["t7", 0],
+        24: ["t8", 0],
+        25: ["t9", 0],
+        29: ["sp", 0],
+        31: ["ra", 0],
+        "hi": ["hi", 0],
+        "lo": ["lo", 0]
+    }
 
     def __init__(self, input_file):
         """
@@ -37,10 +44,13 @@ class Simulator():
         :return: raw binary instruction (string).
         """
         raw_instruction = ""
-        for i in range(4):
-            raw_instruction += self.memory[self.pc+i]
-        self.pc += 4
-        return raw_instruction
+        try:
+            for i in range(4):
+                raw_instruction += self.memory[self.pc+i]
+            return raw_instruction
+        except KeyError:
+            print(self.memory)
+            exit(0)
 
 
     def decode(self, raw_instruction):
@@ -57,19 +67,19 @@ class Simulator():
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
-        ExecutionUnit(instruction, self.memory).execute()
+        self.pc = ExecutionUnit(self.memory, self.reg).execute(self.pc, instruction)
 
 
     def retire(self):
         pass
 
     def simulate(self):
-        self.pc+=4
-        raw_instruction = self.fetch()
-        self.clock+=1
-        instruction = self.decode(raw_instruction)
-        self.clock+=1
-        self.execute(instruction)
-        self.clock+=1
-        self.retire()
-        self.clock+=1
+        while True:
+            raw_instruction = self.fetch()
+            self.clock+=1
+            instruction = self.decode(raw_instruction)
+            self.clock+=1
+            self.execute(instruction)
+            self.clock+=1
+            self.retire()
+            self.clock+=1
