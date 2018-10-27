@@ -2,6 +2,7 @@ class ExecutionUnit():
     # Each execution unit has its own register file...
     ins = None # Instruction to execute
     mem = None # Reference to simulator memory
+
     pending = None # Pending writeback to register
 
 
