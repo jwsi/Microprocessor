@@ -1,9 +1,12 @@
+from classes.register_file import RegisterFile
+
+
 class ExecutionUnit():
     # Each execution unit has its own register file...
     ins = None # Instruction to execute
     mem = None # Reference to simulator memory
 
-    pending = None # Pending writeback to register
+    queue = RegisterFile()
 
 
     def __init__(self, memory, registers):
@@ -26,23 +29,19 @@ class ExecutionUnit():
         """
         # LOAD/STORE
         if ins.name in ["lw", "sw"]:
-            self.lsu.execute(ins)
+            self.lsu.execute(ins, self.queue)
         # ALU Operations
         elif ins.name in ["add", "sub" "and", "or", "xor", "nor", "slt", "slti", "addi",
                                "andi", "ori", "xori", "lui", "sll", "sra"]:
-            self.alu.execute(ins)
+            self.alu.execute(ins, self.queue)
         # FPU Operations
         elif ins.name in ["mult", "div", "mfhi", "mflo"]:
-            self.fpu.execute(ins)
+            self.fpu.execute(ins, self.queue)
         # Branch operations
         elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
-            return self.beu.execute(pc, ins)
+            return self.beu.execute(pc, ins), self.queue
         # All instructions bar branch pc += 4
-        return pc + 4
-
-
-    def writeback(self):
-        pass
+        return pc + 4, self.queue
 
 
     class LSU():
@@ -60,14 +59,14 @@ class ExecutionUnit():
             self.mem = memory
 
 
-        def execute(self, ins):
+        def execute(self, ins, queue):
             """
             This function executes a load/store instruction.
             :param ins: Instruction object to execute.
             """
             if ins.name == "lw":
                 # Load to the register rt the word found at (register_file(rs) + imm) in memory.
-                self.reg[ins.rt][1] = self._get_word(self.reg[ins.rs][1] + ins.imm)
+                queue.write(ins.rt, self._get_word(self.reg[ins.rs][1] + ins.imm))
             elif ins.name == "sw":
                 # Store to memory(rs + imm) the word found in the target register.
                 self._store_word(self.reg[ins.rt][1], self.reg[ins.rs][1] + ins.imm)
@@ -112,41 +111,41 @@ class ExecutionUnit():
             self.reg = registers
 
 
-        def execute(self, ins):
+        def execute(self, ins, queue):
             """
             Given an ALU Instruction object, it will execute it.
             :param ins: Instruction object.
             """
             if ins.name == "add":
-                self.reg[ins.rd][1] = self.reg[ins.rs][1] + self.reg[ins.rt][1]
+                queue.write(ins.rd, self.reg[ins.rs][1] + self.reg[ins.rt][1])
             elif ins.name == "sub":
-                self.reg[ins.rd][1] = self.reg[ins.rs][1] - self.reg[ins.rt][1]
+                queue.write(ins.rd, self.reg[ins.rs][1] - self.reg[ins.rt][1])
             elif ins.name == "and":
-                self.reg[ins.rd][1] = self.reg[ins.rs][1] & self.reg[ins.rt][1]
+                queue.write(ins.rd, self.reg[ins.rs][1] & self.reg[ins.rt][1])
             elif ins.name == "or":
-                self.reg[ins.rd][1] = self.reg[ins.rs][1] | self.reg[ins.rt][1]
+                queue.write(ins.rd, self.reg[ins.rs][1] | self.reg[ins.rt][1])
             elif ins.name == "xor":
-                self.reg[ins.rd][1] = self.reg[ins.rs][1] ^ self.reg[ins.rt][1]
+                queue.write(ins.rd, self.reg[ins.rs][1] ^ self.reg[ins.rt][1])
             elif ins.name == "nor":
-                self.reg[ins.rd][1] = ~(self.reg[ins.rs][1] | self.reg[ins.rt][1])
+                queue.write(ins.rd, ~(self.reg[ins.rs][1] | self.reg[ins.rt][1]))
             elif ins.name == "slt":
-                self.reg[ins.rd][1] = int(self.reg[ins.rs][1] < self.reg[ins.rt][1])
+                queue.write(ins.rd, int(self.reg[ins.rs][1] < self.reg[ins.rt][1]))
             elif ins.name == "slti":
-                self.reg[ins.rt][1] = int(self.reg[ins.rs][1] < ins.imm)
+                queue.write(ins.rt, int(self.reg[ins.rs][1] < ins.imm))
             elif ins.name == "addi":
-                self.reg[ins.rt][1] = self.reg[ins.rs][1] + ins.imm
+                queue.write(ins.rt, self.reg[ins.rs][1] + ins.imm)
             elif ins.name == "andi":
-                self.reg[ins.rt][1] = self.reg[ins.rs][1] & ins.imm
+                queue.write(ins.rt, self.reg[ins.rs][1] & ins.imm)
             elif ins.name == "ori":
-                self.reg[ins.rt][1] = self.reg[ins.rs][1] | ins.imm
+                queue.write(ins.rt, self.reg[ins.rs][1] | ins.imm)
             elif ins.name == "xori":
-                self.reg[ins.rt][1] = self.reg[ins.rs][1] ^ ins.imm
+                queue.write(ins.rt, self.reg[ins.rs][1] ^ ins.imm)
             elif ins.name == "lui":
-                self.reg[ins.rt][1] = ins.imm << 16
+                queue.write(ins.rt, ins.imm << 16)
             elif ins.name == "sll":
-                self.reg[ins.rd][1] = self.reg[ins.rt][1] << ins.shift
+                queue.write(ins.rd, self.reg[ins.rt][1] << ins.shift)
             elif ins.name == "sra":
-                self.reg[ins.rd][1] = self.reg[ins.rt][1] >> ins.shift
+                queue.write(ins.rd, self.reg[ins.rt][1] >> ins.shift)
 
 
     class FPU():
@@ -162,20 +161,20 @@ class ExecutionUnit():
             self.reg = registers
 
 
-        def execute(self, ins):
+        def execute(self, ins, queue):
             """
             Given an FPU Instruction object, it will execute it.
             :param ins: Instruction object.
             """
             if ins.name == "mult":
-                self.reg["lo"][1] = self.reg[ins.rs][1] * self.reg[ins.rt][1]
+                queue.write("lo", self.reg[ins.rs][1] * self.reg[ins.rt][1])
             elif ins.name == "div":
-                self.reg["lo"][1] = self.reg[ins.rs][1] // self.reg[ins.rt][1]
-                self.reg["hi"][1] = self.reg[ins.rs][1] % self.reg[ins.rt][1]
+                queue.write("lo", self.reg[ins.rs][1] // self.reg[ins.rt][1])
+                queue.write("hi", self.reg[ins.rs][1] % self.reg[ins.rt][1])
             elif ins.name == "mfhi":
-                self.reg[ins.rd][1] = self.reg["hi"][1]
+                queue.write(ins.rd, self.reg["hi"][1])
             elif ins.name == "mflo":
-                self.reg[ins.rd][1] = self.reg["lo"][1]
+                queue.write(ins.rd, self.reg["lo"][1])
 
 
     class BEU():

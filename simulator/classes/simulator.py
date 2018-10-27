@@ -1,31 +1,14 @@
 import pickle
 from classes.instruction import Instruction
 from classes.execution_unit import ExecutionUnit
+from classes.register_file import RegisterFile
 
 
 class Simulator():
     memory = None
     pc = None
-
     clock = 0
-
-    reg = {
-        0: ["zero", 0],
-        8: ["t0", 0],
-        9: ["t1", 0],
-        10: ["t2", 0],
-        11: ["t3", 0],
-        12: ["t4", 0],
-        13: ["t5", 0],
-        14: ["t6", 0],
-        15: ["t7", 0],
-        24: ["t8", 0],
-        25: ["t9", 0],
-        29: ["sp", 0],
-        31: ["ra", 0],
-        "hi": ["hi", 0],
-        "lo": ["lo", 0]
-    }
+    register_file = RegisterFile().reg # Create the parent register file for the simulator
 
     def __init__(self, input_file):
         """
@@ -35,6 +18,7 @@ class Simulator():
         f = open(input_file, "rb")
         self.memory = pickle.load(f)
         self.pc = pickle.load(f)
+        self.eu = ExecutionUnit(self.memory, self.register_file)
         f.close()
 
 
@@ -67,11 +51,13 @@ class Simulator():
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
-        self.pc = ExecutionUnit(self.memory, self.reg).execute(self.pc, instruction)
+        self.pc, queue = self.eu.execute(self.pc, instruction)
+        return queue
 
 
-    def retire(self):
-        pass
+    def retire(self, queue):
+        queue.commit(self.register_file)
+
 
     def simulate(self):
         while True:
@@ -79,7 +65,7 @@ class Simulator():
             self.clock+=1
             instruction = self.decode(raw_instruction)
             self.clock+=1
-            self.execute(instruction)
+            queue = self.execute(instruction)
             self.clock+=1
-            self.retire()
+            self.retire(queue)
             self.clock+=1
