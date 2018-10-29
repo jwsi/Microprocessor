@@ -13,8 +13,8 @@ class RegisterFile():
         25: ["t9", 0, False],
         29: ["sp", 0, False],
         31: ["ra", 0, False],
-        "hi": ["hi", 0, False],
-        "lo": ["lo", 0, False]
+        32: ["hi", 0, False],
+        33: ["lo", 0, False]
     }
 
 
@@ -24,6 +24,8 @@ class RegisterFile():
         :param register_number: register number to update.
         :param value: value to update register with.
         """
+        if register_number == 0: # Cannot write to zero'th register
+            return
         self.reg[register_number][1] = value # Update register value in queue
         self.reg[register_number][2] = True # Mark as dirty
 

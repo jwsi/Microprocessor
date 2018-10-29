@@ -167,14 +167,14 @@ class ExecutionUnit():
             :param ins: Instruction object.
             """
             if ins.name == "mult":
-                queue.write("lo", self.reg[ins.rs][1] * self.reg[ins.rt][1])
+                queue.write(33, self.reg[ins.rs][1] * self.reg[ins.rt][1])
             elif ins.name == "div":
-                queue.write("lo", self.reg[ins.rs][1] // self.reg[ins.rt][1])
-                queue.write("hi", self.reg[ins.rs][1] % self.reg[ins.rt][1])
+                queue.write(33, self.reg[ins.rs][1] // self.reg[ins.rt][1])
+                queue.write(32, self.reg[ins.rs][1] % self.reg[ins.rt][1])
             elif ins.name == "mfhi":
-                queue.write(ins.rd, self.reg["hi"][1])
+                queue.write(ins.rd, self.reg[32][1])
             elif ins.name == "mflo":
-                queue.write(ins.rd, self.reg["lo"][1])
+                queue.write(ins.rd, self.reg[33][1])
 
 
     class BEU():
@@ -215,4 +215,3 @@ class ExecutionUnit():
             elif ins.name == "jr":
                 return self.reg[ins.rs][1]
             return pc + 4
-

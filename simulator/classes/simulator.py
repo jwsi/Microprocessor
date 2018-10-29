@@ -5,6 +5,9 @@ from classes.register_file import RegisterFile
 
 
 class Simulator():
+    """
+    This is the class for the main processor simulator.
+    """
     memory = None
     pc = None
     clock = 0
@@ -18,6 +21,7 @@ class Simulator():
         f = open(input_file, "rb")
         self.memory = pickle.load(f)
         self.pc = pickle.load(f)
+        self.register_file[29][1] = (max(self.memory) + 1) + (1000*4) # Initialise the stack pointer (1000 words).
         self.eu = ExecutionUnit(self.memory, self.register_file)
         f.close()
 
@@ -56,10 +60,18 @@ class Simulator():
 
 
     def retire(self, queue):
+        """
+        This function writes back the pending results from the EUs to the register file.
+        :param queue: queue of writebacks.
+        """
         queue.commit(self.register_file)
 
 
     def simulate(self):
+        """
+        The main simulate function controlling the:
+        fetch, decode, execute and writeback commands.c
+        """
         while True:
             raw_instruction = self.fetch()
             self.clock+=1
