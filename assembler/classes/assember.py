@@ -190,6 +190,8 @@ class Assembler():
                 return (number + 8), offset
             else:
                 return (number + 16), offset
+        elif parameter == "sp": # Check for stack pointer
+            return 29, offset
         else: # Otherwise it's a label or immediate
             return parameter, offset
 
