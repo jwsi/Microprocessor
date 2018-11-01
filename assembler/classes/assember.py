@@ -178,20 +178,32 @@ class Assembler():
         :return: parameter interpretation with associated memory offset.
         """
         result = re.search('([-0-9]*)\(*\$*([A-Za-z0-9_]*)\)*', parameter)
+        is_register = '$' in parameter
         offset = int(result.group(1) or 0)
         parameter = result.group(2)
         if not bool(parameter): # If parameter is not found then it's an immediate and offset should be used.
             return offset, 0
-        if parameter in ["0", "zero"]: # Check for zero register
+        if is_register and parameter in ["0", "zero"]: # Check for zero register
             return 0, offset
-        elif parameter[0] == 't': # Check for temp register
+        elif is_register and parameter[0] == 't': # Check for temp register
             number = int(parameter[1])
             if number <= 7:
                 return (number + 8), offset
             else:
                 return (number + 16), offset
-        elif parameter == "sp": # Check for stack pointer
+        elif is_register and parameter == "sp": # Check for stack pointer
             return 29, offset
+        elif is_register and parameter[0] == 's': # Check for saved register
+            number = int(parameter[1])
+            return (number + 16), offset
+        elif is_register and parameter[0] == 'a': # Check for argument register
+            number = int(parameter[1])
+            return (number + 4), offset
+        elif is_register and parameter[0] == 'v':  # Check for return register
+            number = int(parameter[1])
+            return (number + 2), offset
+        elif is_register and parameter == "ra": # Check for return address
+            return 31, offset
         else: # Otherwise it's a label or immediate
             return parameter, offset
 

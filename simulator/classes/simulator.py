@@ -38,6 +38,7 @@ class Simulator():
             return raw_instruction
         except KeyError:
             print(self.memory)
+            print(self.register_file[2][:2], self.register_file[3][:2])
             exit(0)
 
 

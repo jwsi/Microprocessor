@@ -39,7 +39,7 @@ class ExecutionUnit():
             self.fpu.execute(ins, self.queue)
         # Branch operations
         elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
-            return self.beu.execute(pc, ins), self.queue
+            return self.beu.execute(pc, ins, self.queue), self.queue
         # All instructions bar branch pc += 4
         return pc + 4, self.queue
 
@@ -190,7 +190,7 @@ class ExecutionUnit():
             self.reg = registers
 
 
-        def execute(self, pc, ins):
+        def execute(self, pc, ins, queue):
             """
             Given an BEU Instruction object, it will execute it.
             :param ins: Instruction object.
@@ -210,7 +210,7 @@ class ExecutionUnit():
             elif ins.name == "j":
                 return ins.address
             elif ins.name == "jal":
-                self.reg[31][1] = pc + 8
+                queue.write(31, pc + 4)
                 return ins.address
             elif ins.name == "jr":
                 return self.reg[ins.rs][1]
