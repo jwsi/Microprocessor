@@ -1,6 +1,10 @@
+import curses, time
+from classes.constants import instruction_time
+
 class RegisterFile():
     reg = {
         0: ["zero", 0, False],
+        1: ["at", 0, False],
         2: ["v0", 0, False],
         3: ["v1", 0, False],
         4: ["a0", 0, False],
@@ -25,7 +29,11 @@ class RegisterFile():
         23: ["s7", 0, False],
         24: ["t8", 0, False],
         25: ["t9", 0, False],
+        26: ["k0", 0, False],
+        27: ["k1", 0, False],
+        28: ["gp", 0, False],
         29: ["sp", 0, False],
+        30: ["fp", 0, False],
         31: ["ra", 0, False],
         32: ["hi", 0, False],
         33: ["lo", 0, False]
@@ -44,11 +52,19 @@ class RegisterFile():
         self.reg[register_number][2] = True # Mark as dirty
 
 
-    def commit(self, register_file):
+    def commit(self, register_file, stdscr):
         """
         Commit the changes of the queue into the main register_file.
+        Also displays the register updates to the screen in green.
         :param register_file: register file to commit changes to.
         """
         for register, contents in self.reg.items():
             if contents[2]:
+                offset = 100
+                if register > 20:
+                    offset += 20
                 register_file[register][1] = contents[1]
+                contents[2] = False
+                stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
+        stdscr.refresh()
+        time.sleep(instruction_time)

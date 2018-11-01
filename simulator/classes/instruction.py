@@ -39,6 +39,28 @@ class Instruction():
         self._decode_operands()
 
 
+    def description(self, registers):
+        """
+        Returns a print friendly description of the Instruction object.
+        :param registers: Register file in use.
+        :return: String representing the instruction object.
+        """
+        if self.type == Type.R:
+            return str(self.name) + \
+                   " (rd: " + str(registers[self.rd][0]) + ") " \
+                   "(rs: " + str(registers[self.rs][0]) + ") " \
+                   "(rt: " + str(registers[self.rt][0]) + ") " \
+                   "(shift: " + str(self.shift) + ")"
+        elif self.type == Type.I:
+            return str(self.name) + \
+                   " (rs: " + str(registers[self.rs][0]) + ") " \
+                   "(rt: " + str(registers[self.rt][0]) + ") " \
+                   "(imm: " + str(self.imm) + ")"
+        elif self.type == Type.J:
+            return str(self.name) + \
+                   " (addr: " + str(self.address) + ") "
+
+
     def _decode_operands(self):
         """
         This function decodes operands based on the instruction type.
