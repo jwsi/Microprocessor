@@ -97,6 +97,7 @@ class Simulator():
         self.stdscr.addstr(3, 10, str(instruction.type), curses.color_pair(1))
         self.stdscr.addstr(4, 10, instruction.description(self.register_file).ljust(64), curses.color_pair(1))
         self.stdscr.addstr(9, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
+        self.stdscr.addstr(10, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
         for i in range(34):
             offset = 100
             if i > 20:
