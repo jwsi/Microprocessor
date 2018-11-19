@@ -1,4 +1,5 @@
 from classes.register_file import RegisterFile
+from classes.errors import Interrupt
 
 
 class ExecutionUnit():
@@ -40,6 +41,9 @@ class ExecutionUnit():
         # Branch operations
         elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
             return self.beu.execute(pc, ins, self.queue), self.queue
+        # Syscall
+        elif ins.name == "syscall":
+            raise Interrupt()
         # All instructions bar branch pc += 4
         return pc + 4, self.queue
 

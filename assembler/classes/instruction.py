@@ -48,8 +48,8 @@ class Instruction():
             stage = 3
             p3, o3 = self.instruction[3]
         except IndexError: # Check instruction format.
-            if function in [8, 16, 18] and stage == 2:
-                pass # JR, MFHI, MFLO only take 1 parameter.
+            if function in [8, 16, 18, 38] and stage == 2:
+                pass # JR, MFHI, MFLO, SYSCALL only take 1 parameter.
             elif function in [24, 26] and stage == 3:
                 pass # Multiply & Divide only take 2 parameters as there is no destination register.
             else:
@@ -61,7 +61,7 @@ class Instruction():
             rd, rt, shift = p1, p2, p3
         elif function == 8:
             rs = p1
-        elif function in [16, 18]:
+        elif function in [16, 18, 38]:
             rd = p1
         else:
             rd, rs, rt = p1, p2, p3

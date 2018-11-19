@@ -1,7 +1,8 @@
-import pickle, curses
+import pickle, curses, copy
 from classes.instruction import Instruction
 from classes.execution_unit import ExecutionUnit
 from classes.register_file import RegisterFile
+from classes.constants import debug, instruction_time
 
 
 class Simulator():
@@ -12,6 +13,8 @@ class Simulator():
     pc = None
     clock = 0
     register_file = RegisterFile().reg # Create the parent register file for the simulator
+    nop = "00000000000000000000000000000000"
+    strikes = 0
 
     def __init__(self, input_file, stdscr):
         """
@@ -25,7 +28,8 @@ class Simulator():
         self.register_file[29][1] = (max(self.memory) + 1) + (1000*4) # Initialise the stack pointer (1000 words).
         self.eu = ExecutionUnit(self.memory, self.register_file)
         self.stdscr = stdscr # Define the curses terminal
-        self.setup_screen() # Setup the initial curses layout
+        if not debug:
+            self.setup_screen() # Setup the initial curses layout
 
 
     def fetch(self):
@@ -37,9 +41,10 @@ class Simulator():
         try:
             for i in range(4):
                 raw_instruction += self.memory[self.pc+i]
-            return raw_instruction
+            self.pc += 4
+            return self.pc - 4, raw_instruction
         except KeyError:
-            self.shutdown()
+            return None
 
 
     def decode(self, raw_instruction):
@@ -56,8 +61,8 @@ class Simulator():
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
-        self.pc, queue = self.eu.execute(self.pc, instruction)
-        return queue
+        pc, queue = self.eu.execute(instruction[0], instruction[1])
+        return pc, queue
 
 
     def retire(self, queue):
@@ -73,29 +78,52 @@ class Simulator():
         The main simulate function controlling the:
         fetch, decode, execute and writeback commands.c
         """
+        stages = {
+            "fetch" : None, # Default to no-op
+            "decode" : None,
+            "execute" : None,
+        }
+        pipeline = [copy.copy(stages)]
         while True:
-            # Fetch
-            raw_instruction = self.fetch()
-            self.clock+=1
-            # Decode & Display All
-            instruction = self.decode(raw_instruction)
-            self.print_state(instruction)
-            self.clock+=1
-            # Execute
-            queue = self.execute(instruction)
-            self.clock+=1
-            # Retire & Display Updates
-            self.retire(queue)
-            self.clock+=1
+            self.clock += 1
+            pipeline.append(copy.copy(stages))
+            # Fetch Stage in Pipeline
+            pipeline[self.clock]["fetch"] = self.fetch()
+            # Decode Stage in Pipeline & Display All
+            if pipeline[self.clock - 1]["fetch"] is not None:
+                print(self.decode(pipeline[self.clock - 1]["fetch"][1]).name)
+                pipeline[self.clock]["decode"] = pipeline[self.clock - 1]["fetch"][0], self.decode(pipeline[self.clock - 1]["fetch"][1])
+            # Execute Stage in Pipeline
+            if pipeline[self.clock - 1]["decode"] is not None:
+                pc, pipeline[self.clock]["execute"] = self.execute(pipeline[self.clock - 1]["decode"])
+                if pc != self.pc - 8:
+                    self.flush(pipeline)
+                    self.pc = pc
+            # Retire Stage in Pipeline & Show updates.
+            if pipeline[self.clock - 1]["execute"] is not None:
+                self.retire(pipeline[self.clock - 1]["execute"])
+            if not debug:
+                self.print_state(pipeline)
 
 
-    def print_state(self, instruction):
+    def flush(self, pipeline):
+        pipeline[self.clock]["fetch"] = None
+        pipeline[self.clock]["decode"] = None
+
+
+    def print_state(self, pipeline):
         """
         This function prints the current state of the simulator to the terminal
         :param instruction: Instruction to be executed.
         """
-        self.stdscr.addstr(3, 10, str(instruction.type), curses.color_pair(1))
-        self.stdscr.addstr(4, 10, instruction.description(self.register_file).ljust(64), curses.color_pair(1))
+        try:
+            self.stdscr.addstr(3, 10, str(pipeline[self.clock]["decode"][1].type), curses.color_pair(1))
+        except:
+            self.stdscr.addstr(3, 10, "No Instruction", curses.color_pair(1))
+        try:
+            self.stdscr.addstr(4, 10, pipeline[self.clock]["decode"][1].description(self.register_file).ljust(64), curses.color_pair(1))
+        except:
+            pass
         self.stdscr.addstr(9, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
         self.stdscr.addstr(10, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
         for i in range(34):
@@ -103,7 +131,21 @@ class Simulator():
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i%20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
+        try:
+            self.stdscr.addstr(12, 10, "Pipeline Fetch: " +   str(self.decode(pipeline[self.clock]  ["fetch"][1]).description(self.register_file).ljust(64)), curses.color_pair(3))
+        except:
+            self.stdscr.addstr(12, 10, "Pipeline Fetch: Empty".ljust(64), curses.color_pair(3))
+        try:
+            self.stdscr.addstr(13, 10, "Pipeline Decode: " +  str(            pipeline[self.clock]  ["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(3))
+        except:
+            self.stdscr.addstr(13, 10, "Pipeline Decode: Empty".ljust(64), curses.color_pair(3))
+        try:
+            self.stdscr.addstr(14, 10, "Pipeline Execute: " + str(            pipeline[self.clock-1]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(3))
+        except:
+            self.stdscr.addstr(14, 10, "Pipeline Execute: Empty".ljust(64), curses.color_pair(3))
         self.stdscr.refresh()
+        import time
+        time.sleep(instruction_time)
 
 
     def setup_screen(self):

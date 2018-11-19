@@ -1,5 +1,5 @@
 import curses, time
-from classes.constants import instruction_time
+from classes.constants import instruction_time, debug
 
 class RegisterFile():
     reg = {
@@ -65,6 +65,8 @@ class RegisterFile():
                     offset += 20
                 register_file[register][1] = contents[1]
                 contents[2] = False
-                stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
-        stdscr.refresh()
+                if not debug:
+                    stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
+        if not debug:
+            stdscr.refresh()
         time.sleep(instruction_time)

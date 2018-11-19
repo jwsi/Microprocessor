@@ -46,7 +46,8 @@ class Opcode():
         (3, None)  : ("jal",  Type.J),
         (0, 8)     : ("jr",   Type.R),
         (0, 16)    : ("mfhi", Type.R),
-        (0, 18)    : ("mflo", Type.R)
+        (0, 18)    : ("mflo", Type.R),
+        (0, 38)    : ("syscall", Type.R)
     }
 
     def __init__(self, opcode, function):

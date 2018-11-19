@@ -11,24 +11,24 @@ limit:   .word 5
 
 # Main invocation point
 main:
-    lw $s0, counter       # Initialise loop counter
-    lw $s1, limit         # Initialise limit
-    addi $s2, $zero, a    # Load address of a into s2
-    addi $s3, $zero, b    # Load address of b into s3
-    addi $v0, $zero, 0    # Initialise return value to 0
+    lw $s0, counter       # Initialise loop counter 84
+    lw $s1, limit         # Initialise limit   88
+    addi $s2, $zero, a    # Load address of a into s2  92
+    addi $s3, $zero, b    # Load address of b into s3  96
+    addi $v0, $zero, 0    # Initialise return value to 0  100
     j loop
 
 # Loop label designed to iterate over vectors
 loop:
-    bne $s0, $s1, 2       # If counter != limit then go forward 2 instructions
-    j end                 # Otherwise go to the end of the program
-    lw $a0, $s2           # Load value at a location into a0
+    bne $s0, $s1, 2       # If counter != limit then go forward 2 instructions  104
+    j end                 # Otherwise go to the end of the program  108
+    lw $a0, $s2           # Load value at a location into a0   112
     lw $a1, $s3           # Load value at b location into a1
 
     addi $sp, $sp, -4     # Allocate space on stack
     sw $v0, $sp           # Store v0 on stack
     jal multiply          # Call multiply
-    lw $t0, $sp           # Retrieve value placed on stack.
+    lw $t0, $sp           # Retrieve value placed on stack. 132
     addi $sp, $sp, 4      # Deallocate space on stack.
     add $v0, $v0, $t0     # Add add v0 to original v0 value
 
@@ -48,4 +48,4 @@ multiply:
 
 # Exit point
 end:
-    sll $zero, $zero, 0   # Final nop
+    syscall   # Exit
