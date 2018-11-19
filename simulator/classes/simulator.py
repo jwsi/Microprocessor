@@ -1,4 +1,4 @@
-import pickle, curses, copy
+import pickle, curses, copy, time
 from classes.instruction import Instruction
 from classes.execution_unit import ExecutionUnit
 from classes.register_file import RegisterFile
@@ -13,7 +13,6 @@ class Simulator():
     pc = None
     clock = 0
     register_file = RegisterFile().reg # Create the parent register file for the simulator
-    nop = "00000000000000000000000000000000"
     strikes = 0
 
     def __init__(self, input_file, stdscr):
@@ -91,7 +90,6 @@ class Simulator():
             pipeline[self.clock]["fetch"] = self.fetch()
             # Decode Stage in Pipeline & Display All
             if pipeline[self.clock - 1]["fetch"] is not None:
-                print(self.decode(pipeline[self.clock - 1]["fetch"][1]).name)
                 pipeline[self.clock]["decode"] = pipeline[self.clock - 1]["fetch"][0], self.decode(pipeline[self.clock - 1]["fetch"][1])
             # Execute Stage in Pipeline
             if pipeline[self.clock - 1]["decode"] is not None:
@@ -116,36 +114,31 @@ class Simulator():
         This function prints the current state of the simulator to the terminal
         :param instruction: Instruction to be executed.
         """
-        try:
-            self.stdscr.addstr(3, 10, str(pipeline[self.clock]["decode"][1].type), curses.color_pair(1))
-        except:
-            self.stdscr.addstr(3, 10, "No Instruction", curses.color_pair(1))
-        try:
-            self.stdscr.addstr(4, 10, pipeline[self.clock]["decode"][1].description(self.register_file).ljust(64), curses.color_pair(1))
-        except:
-            pass
-        self.stdscr.addstr(9, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
-        self.stdscr.addstr(10, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
+        self.stdscr.addstr(2, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
+        self.stdscr.addstr(3, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
         for i in range(34):
             offset = 100
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i%20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
         try:
-            self.stdscr.addstr(12, 10, "Pipeline Fetch: " +   str(self.decode(pipeline[self.clock]  ["fetch"][1]).description(self.register_file).ljust(64)), curses.color_pair(3))
+            self.stdscr.addstr(7, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"][1]).description(self.register_file).ljust(64)), curses.color_pair(4))
         except:
-            self.stdscr.addstr(12, 10, "Pipeline Fetch: Empty".ljust(64), curses.color_pair(3))
+            self.stdscr.addstr(7, 10, "Pipeline Fetch:     Empty".ljust(64), curses.color_pair(4))
         try:
-            self.stdscr.addstr(13, 10, "Pipeline Decode: " +  str(            pipeline[self.clock]  ["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(3))
+            self.stdscr.addstr(8, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(1))
         except:
-            self.stdscr.addstr(13, 10, "Pipeline Decode: Empty".ljust(64), curses.color_pair(3))
+            self.stdscr.addstr(8, 10, "Pipeline Decode:    Empty".ljust(64), curses.color_pair(1))
         try:
-            self.stdscr.addstr(14, 10, "Pipeline Execute: " + str(            pipeline[self.clock-1]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(3))
+            self.stdscr.addstr(9, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(6))
         except:
-            self.stdscr.addstr(14, 10, "Pipeline Execute: Empty".ljust(64), curses.color_pair(3))
+            self.stdscr.addstr(9, 10, "Pipeline Execute:   Empty".ljust(64), curses.color_pair(6))
+        try:
+            self.stdscr.addstr(10, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(5))
+        except:
+            self.stdscr.addstr(10, 10, "Pipeline Writeback: Empty".ljust(64), curses.color_pair(5))
+            time.sleep(instruction_time) # Need to account for no writeback pause.
         self.stdscr.refresh()
-        import time
-        time.sleep(instruction_time)
 
 
     def setup_screen(self):
@@ -155,9 +148,12 @@ class Simulator():
         curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
-        self.stdscr.addstr(0, 10, "INSTRUCTION INFORMATION", curses.A_BOLD)
+        curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
+        curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
         self.stdscr.addstr(0, 100, "REGISTER FILE", curses.A_BOLD)
-        self.stdscr.addstr(7, 10, "MACHINE INFORMATION", curses.A_BOLD)
+        self.stdscr.addstr(0, 10, "MACHINE INFORMATION", curses.A_BOLD)
+        self.stdscr.addstr(5, 10, "PIPELINE INFORMATION", curses.A_BOLD)
 
 
     def shutdown(self):
