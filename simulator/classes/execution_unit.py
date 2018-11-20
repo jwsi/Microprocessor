@@ -24,7 +24,7 @@ class ExecutionUnit():
         self.beu = self.BEU(self.reg)
 
 
-    def execute(self, pc, ins):
+    def execute(self, ins):
         """
         Executes the stored Instruction object.
         """
@@ -40,12 +40,12 @@ class ExecutionUnit():
             self.fpu.execute(ins, self.queue)
         # Branch operations
         elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
-            return self.beu.execute(pc, ins, self.queue), self.queue
+            return self.beu.execute(ins, self.queue), self.queue
         # Syscall
         elif ins.name == "syscall":
             raise Interrupt()
         # All instructions bar branch pc += 4
-        return pc + 4, self.queue
+        return ins.pc + 4, self.queue
 
 
     class LSU():
@@ -194,28 +194,28 @@ class ExecutionUnit():
             self.reg = registers
 
 
-        def execute(self, pc, ins, queue):
+        def execute(self, ins, queue):
             """
             Given an BEU Instruction object, it will execute it.
             :param ins: Instruction object.
             """
             if ins.name == "beq":
                 if self.reg[ins.rs][1] == self.reg[ins.rt][1]:
-                    return pc + (ins.imm << 2)
+                    return ins.pc + (ins.imm << 2)
             elif ins.name == "bne":
                 if self.reg[ins.rs][1] != self.reg[ins.rt][1]:
-                    return pc + (ins.imm << 2)
+                    return ins.pc + (ins.imm << 2)
             elif ins.name == "blez":
                 if self.reg[ins.rs][1] <= 0:
-                    return pc + (ins.imm << 2)
+                    return ins.pc + (ins.imm << 2)
             elif ins.name == "bgtz":
                 if self.reg[ins.rs][1] > 0:
-                    return pc + (ins.imm << 2)
+                    return ins.pc + (ins.imm << 2)
             elif ins.name == "j":
                 return ins.address
             elif ins.name == "jal":
-                queue.write(31, pc + 4)
+                queue.write(31, ins.pc + 4)
                 return ins.address
             elif ins.name == "jr":
                 return self.reg[ins.rs][1]
-            return pc + 4
+            return ins.pc + 4

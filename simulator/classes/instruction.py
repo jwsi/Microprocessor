@@ -4,6 +4,9 @@ class Instruction():
     """
     Class for decoding machine instructions.
     """
+    # PC value of instruction
+    pc = None
+
     # Name and type of instruction
     name = None
     type = None
@@ -16,11 +19,12 @@ class Instruction():
     shift = None
     address = None
 
-    def __init__(self, raw_instruction):
+    def __init__(self, pc, raw_instruction):
         """
         Instruction class constructor.
         :param raw_instruction: String containing fetched instruction from memory.
         """
+        self.pc = pc
         self.raw_instruction = raw_instruction
         self.decode()
 

@@ -3,6 +3,7 @@ from classes.instruction import Instruction
 from classes.execution_unit import ExecutionUnit
 from classes.register_file import RegisterFile
 from classes.constants import debug, instruction_time
+from classes.errors import Interrupt
 
 
 class Simulator():
@@ -41,18 +42,21 @@ class Simulator():
             for i in range(4):
                 raw_instruction += self.memory[self.pc+i]
             self.pc += 4
-            return self.pc - 4, raw_instruction
+            return {
+                "pc" : self.pc - 4,
+                "raw_instruction" : raw_instruction
+            }
         except KeyError:
             return None
 
 
-    def decode(self, raw_instruction):
+    def decode(self, fetch_object):
         """
         This function decodes the raw instruction into a Instruction object.
         :param raw_instruction: binary string of MIPS instruction.
         :return: Instruction object.
         """
-        return Instruction(raw_instruction)
+        return Instruction(fetch_object["pc"], fetch_object["raw_instruction"])
 
 
     def execute(self, instruction):
@@ -60,7 +64,7 @@ class Simulator():
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
-        pc, queue = self.eu.execute(instruction[0], instruction[1])
+        pc, queue = self.eu.execute(instruction)
         return pc, queue
 
 
@@ -78,7 +82,7 @@ class Simulator():
         fetch, decode, execute and writeback commands.c
         """
         stages = {
-            "fetch" : None, # Default to no-op
+            "fetch" : None,
             "decode" : None,
             "execute" : None,
         }
@@ -90,14 +94,18 @@ class Simulator():
             pipeline[self.clock]["fetch"] = self.fetch()
             # Decode Stage in Pipeline & Display All
             if pipeline[self.clock - 1]["fetch"] is not None:
-                pipeline[self.clock]["decode"] = pipeline[self.clock - 1]["fetch"][0], self.decode(pipeline[self.clock - 1]["fetch"][1])
+                pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
             # Execute Stage in Pipeline
             if pipeline[self.clock - 1]["decode"] is not None:
-                pc, pipeline[self.clock]["execute"] = self.execute(pipeline[self.clock - 1]["decode"])
+                try:
+                    pc, pipeline[self.clock]["execute"] = self.execute(pipeline[self.clock - 1]["decode"])
+                except Interrupt: # Catch Interrupts
+                    self.print_state(pipeline)
+                    raise Interrupt
                 if pc != self.pc - 8:
                     self.flush(pipeline)
                     self.pc = pc
-            # Retire Stage in Pipeline & Show updates.
+            # Writeback stage in pipeline
             if pipeline[self.clock - 1]["execute"] is not None:
                 self.retire(pipeline[self.clock - 1]["execute"])
             if not debug:
@@ -122,21 +130,21 @@ class Simulator():
                 offset += 20
             self.stdscr.addstr(i%20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
         try:
-            self.stdscr.addstr(7, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"][1]).description(self.register_file).ljust(64)), curses.color_pair(4))
+            self.stdscr.addstr(7, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"]).description(self.register_file).ljust(64)), curses.color_pair(4))
         except:
-            self.stdscr.addstr(7, 10, "Pipeline Fetch:     Empty".ljust(64), curses.color_pair(4))
+            self.stdscr.addstr(7, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
         try:
-            self.stdscr.addstr(8, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(1))
+            self.stdscr.addstr(8, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"].description(self.register_file).ljust(64)), curses.color_pair(1))
         except:
-            self.stdscr.addstr(8, 10, "Pipeline Decode:    Empty".ljust(64), curses.color_pair(1))
+            self.stdscr.addstr(8, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
         try:
-            self.stdscr.addstr(9, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(6))
+            self.stdscr.addstr(9, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"].description(self.register_file).ljust(64)), curses.color_pair(6))
         except:
-            self.stdscr.addstr(9, 10, "Pipeline Execute:   Empty".ljust(64), curses.color_pair(6))
+            self.stdscr.addstr(9, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
         try:
-            self.stdscr.addstr(10, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"][1].description(self.register_file).ljust(64)), curses.color_pair(5))
+            self.stdscr.addstr(10, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"].description(self.register_file).ljust(64)), curses.color_pair(5))
         except:
-            self.stdscr.addstr(10, 10, "Pipeline Writeback: Empty".ljust(64), curses.color_pair(5))
+            self.stdscr.addstr(10, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
             time.sleep(instruction_time) # Need to account for no writeback pause.
         self.stdscr.refresh()
 
