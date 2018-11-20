@@ -79,7 +79,7 @@ class Simulator():
     def simulate(self):
         """
         The main simulate function controlling the:
-        fetch, decode, execute and writeback commands.c
+        fetch, decode, execute and writeback.
         """
         stages = {
             "fetch" : None,
@@ -90,29 +90,41 @@ class Simulator():
         while True:
             self.clock += 1
             pipeline.append(copy.copy(stages))
-            # Fetch Stage in Pipeline
-            pipeline[self.clock]["fetch"] = self.fetch()
-            # Decode Stage in Pipeline & Display All
-            if pipeline[self.clock - 1]["fetch"] is not None:
-                pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
-            # Execute Stage in Pipeline
-            if pipeline[self.clock - 1]["decode"] is not None:
-                try:
-                    pc, pipeline[self.clock]["execute"] = self.execute(pipeline[self.clock - 1]["decode"])
-                except Interrupt: # Catch Interrupts
-                    self.print_state(pipeline)
-                    raise Interrupt
-                if pc != self.pc - 8:
-                    self.flush(pipeline)
-                    self.pc = pc
-            # Writeback stage in pipeline
-            if pipeline[self.clock - 1]["execute"] is not None:
-                self.retire(pipeline[self.clock - 1]["execute"])
+            self.advance_pipeline(pipeline)
             if not debug:
                 self.print_state(pipeline)
 
 
-    def flush(self, pipeline):
+    def advance_pipeline(self, pipeline):
+        """
+        This function will advance the pipeline by one stage.
+        :param pipeline: Pipeline to be advanced.
+        """
+        # Fetch Stage in Pipeline
+        pipeline[self.clock]["fetch"] = self.fetch()
+        # Decode Stage in Pipeline & Display All
+        if pipeline[self.clock - 1]["fetch"] is not None:
+            pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
+        # Execute Stage in Pipeline
+        if pipeline[self.clock - 1]["decode"] is not None:
+            try:
+                pc, pipeline[self.clock]["execute"] = self.execute(pipeline[self.clock - 1]["decode"])
+            except Interrupt:  # Catch Interrupts
+                self.print_state(pipeline)
+                raise Interrupt
+            if pc != self.pc - 8:
+                self.flush_pipeline(pipeline)
+                self.pc = pc
+        # Writeback stage in pipeline
+        if pipeline[self.clock - 1]["execute"] is not None:
+            self.retire(pipeline[self.clock - 1]["execute"])
+
+
+    def flush_pipeline(self, pipeline):
+        """
+        This function flushes a particular pipeline.
+        :param pipeline: Pipeline to be flushed.
+        """
         pipeline[self.clock]["fetch"] = None
         pipeline[self.clock]["decode"] = None
 
@@ -161,6 +173,7 @@ class Simulator():
         curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
         self.stdscr.addstr(0, 100, "REGISTER FILE", curses.A_BOLD)
         self.stdscr.addstr(0, 10, "MACHINE INFORMATION", curses.A_BOLD)
+        self.stdscr.addstr(3, 35, "Cycles per second: " + str(instruction_time), curses.color_pair(3))
         self.stdscr.addstr(5, 10, "PIPELINE INFORMATION", curses.A_BOLD)
 
 
