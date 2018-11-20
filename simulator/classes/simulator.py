@@ -29,7 +29,7 @@ class Simulator():
         self.eu = ExecutionUnit(self.memory, self.register_file)
         self.stdscr = stdscr # Define the curses terminal
         if not debug:
-            self.setup_screen() # Setup the initial curses layout
+            self.setup_screen(input_file) # Setup the initial curses layout
 
 
     def fetch(self):
@@ -134,34 +134,34 @@ class Simulator():
         This function prints the current state of the simulator to the terminal
         :param instruction: Instruction to be executed.
         """
-        self.stdscr.addstr(2, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
-        self.stdscr.addstr(3, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
+        self.stdscr.addstr(3, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
+        self.stdscr.addstr(4, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
         for i in range(34):
             offset = 100
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i%20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
         try:
-            self.stdscr.addstr(7, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"]).description(self.register_file).ljust(64)), curses.color_pair(4))
+            self.stdscr.addstr(8, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"]).description(self.register_file).ljust(64)), curses.color_pair(4))
         except:
-            self.stdscr.addstr(7, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
+            self.stdscr.addstr(8, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
         try:
-            self.stdscr.addstr(8, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"].description(self.register_file).ljust(64)), curses.color_pair(1))
+            self.stdscr.addstr(9, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"].description(self.register_file).ljust(64)), curses.color_pair(1))
         except:
-            self.stdscr.addstr(8, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
+            self.stdscr.addstr(9, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
         try:
-            self.stdscr.addstr(9, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"].description(self.register_file).ljust(64)), curses.color_pair(6))
+            self.stdscr.addstr(10, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"].description(self.register_file).ljust(64)), curses.color_pair(6))
         except:
-            self.stdscr.addstr(9, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
+            self.stdscr.addstr(10, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
         try:
-            self.stdscr.addstr(10, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"].description(self.register_file).ljust(64)), curses.color_pair(5))
+            self.stdscr.addstr(11, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"].description(self.register_file).ljust(64)), curses.color_pair(5))
         except:
-            self.stdscr.addstr(10, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
+            self.stdscr.addstr(11, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
             time.sleep(instruction_time) # Need to account for no writeback pause.
         self.stdscr.refresh()
 
 
-    def setup_screen(self):
+    def setup_screen(self, input_file):
         """
         Sets up the curses terminal with the appropriate colour scheme.
         """
@@ -173,8 +173,9 @@ class Simulator():
         curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
         self.stdscr.addstr(0, 100, "REGISTER FILE", curses.A_BOLD)
         self.stdscr.addstr(0, 10, "MACHINE INFORMATION", curses.A_BOLD)
-        self.stdscr.addstr(3, 35, "Cycles per second: " + str(instruction_time), curses.color_pair(3))
-        self.stdscr.addstr(5, 10, "PIPELINE INFORMATION", curses.A_BOLD)
+        self.stdscr.addstr(2, 10, "Program: " + str(input_file), curses.color_pair(4))
+        self.stdscr.addstr(4, 35, "Cycles per second: " + str(instruction_time), curses.color_pair(3))
+        self.stdscr.addstr(6, 10, "PIPELINE INFORMATION", curses.A_BOLD)
 
 
     def shutdown(self):
