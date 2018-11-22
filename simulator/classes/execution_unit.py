@@ -1,9 +1,9 @@
 from classes.register_file import RegisterFile
-from classes.errors import Interrupt
+from classes.errors import Interrupt, UnsupportedInstruction
 
 
 class ExecutionUnit():
-    def __init__(self, memory, registers):
+    def __init__(self, memory, registers, alu=True, lsu=True, fpu=True, beu=True):
         """
         Constructor for ExecutionUnit class.
         :param instruction: Instruction object to execute.
@@ -11,10 +11,15 @@ class ExecutionUnit():
         """
         self.mem = memory
         self.reg = registers # Each EU has it's own register file.
-        self.alu = self.ALU(self.reg)
-        self.lsu = self.LSU(self.reg, self.mem)
-        self.fpu = self.FPU(self.reg)
-        self.beu = self.BEU(self.reg)
+        # Define capabilities of execution unit.
+        if alu:
+            self.alu = self.ALU(self.reg)
+        if lsu:
+            self.lsu = self.LSU(self.reg, self.mem)
+        if fpu:
+            self.fpu = self.FPU(self.reg)
+        if beu:
+            self.beu = self.BEU(self.reg)
 
 
     def execute(self, ins):
@@ -22,24 +27,28 @@ class ExecutionUnit():
         Executes the stored Instruction object.
         """
         queue = RegisterFile()
-        # LOAD/STORE
-        if ins.name in ["lw", "sw"]:
-            self.lsu.execute(ins, queue)
-        # ALU Operations
-        elif ins.name in ["add", "sub" "and", "or", "xor", "nor", "slt", "slti", "addi",
-                               "andi", "ori", "xori", "lui", "sll", "sra"]:
-            self.alu.execute(ins, queue)
-        # FPU Operations
-        elif ins.name in ["mult", "div", "mfhi", "mflo"]:
-            self.fpu.execute(ins, queue)
-        # Branch operations
-        elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
-            return self.beu.execute(ins, queue), queue
-        # Syscall
-        elif ins.name == "syscall":
-            raise Interrupt()
-        # All instructions bar branch pc += 4
-        return ins.pc + 4, queue
+        try:
+            # LOAD/STORE
+            if ins.name in ["lw", "sw"]:
+                self.lsu.execute(ins, queue)
+            # ALU Operations
+            elif ins.name in ["add", "sub" "and", "or","xor", "nor", "slt", "slti",
+                               "addi", "andi", "ori", "xori", "lui", "sll", "sra"]:
+                self.alu.execute(ins, queue)
+            # FPU Operations
+            elif ins.name in ["mult", "div", "mfhi", "mflo"]:
+                self.fpu.execute(ins, queue)
+            # Branch operations
+            elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
+                return self.beu.execute(ins, queue), queue
+            # Syscall
+            elif ins.name == "syscall":
+                raise Interrupt()
+            # All instructions bar branch pc += 4
+            return ins.pc + 4, queue
+        # Catch instructions that cannot be executed by this EU.
+        except AttributeError:
+            raise UnsupportedInstruction("`" + ins.name + "` on EU: " + str(id(self)))
 
 
     class LSU():
