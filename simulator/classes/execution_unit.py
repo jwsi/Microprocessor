@@ -3,13 +3,6 @@ from classes.errors import Interrupt
 
 
 class ExecutionUnit():
-    # Each execution unit has its own register file...
-    ins = None # Instruction to execute
-    mem = None # Reference to simulator memory
-
-    queue = RegisterFile()
-
-
     def __init__(self, memory, registers):
         """
         Constructor for ExecutionUnit class.
@@ -17,7 +10,7 @@ class ExecutionUnit():
         :param memory: simulator main memory reference.
         """
         self.mem = memory
-        self.reg = registers
+        self.reg = registers # Each EU has it's own register file.
         self.alu = self.ALU(self.reg)
         self.lsu = self.LSU(self.reg, self.mem)
         self.fpu = self.FPU(self.reg)
@@ -28,33 +21,31 @@ class ExecutionUnit():
         """
         Executes the stored Instruction object.
         """
+        queue = RegisterFile()
         # LOAD/STORE
         if ins.name in ["lw", "sw"]:
-            self.lsu.execute(ins, self.queue)
+            self.lsu.execute(ins, queue)
         # ALU Operations
         elif ins.name in ["add", "sub" "and", "or", "xor", "nor", "slt", "slti", "addi",
                                "andi", "ori", "xori", "lui", "sll", "sra"]:
-            self.alu.execute(ins, self.queue)
+            self.alu.execute(ins, queue)
         # FPU Operations
         elif ins.name in ["mult", "div", "mfhi", "mflo"]:
-            self.fpu.execute(ins, self.queue)
+            self.fpu.execute(ins, queue)
         # Branch operations
         elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
-            return self.beu.execute(ins, self.queue), self.queue
+            return self.beu.execute(ins, queue), queue
         # Syscall
         elif ins.name == "syscall":
             raise Interrupt()
         # All instructions bar branch pc += 4
-        return ins.pc + 4, self.queue
+        return ins.pc + 4, queue
 
 
     class LSU():
         """
         This is the load store unit for the EU.
         """
-        reg = None
-        mem = None
-
         def __init__(self, registers, memory):
             """
             This is the constructor for the ALU inside the execution unit.
@@ -106,8 +97,6 @@ class ExecutionUnit():
         """
         This is the Arithmetic Logic unit for the EU.
         """
-        reg = None
-
         def __init__(self, registers):
             """
             This is the constructor for the ALU inside the execution unit.
@@ -156,8 +145,6 @@ class ExecutionUnit():
         """
         This is the floating point unit for the EU.
         """
-        reg = None
-
         def __init__(self, registers):
             """
             This is the constructor for the FPU inside the execution unit.
@@ -185,8 +172,6 @@ class ExecutionUnit():
         """
         This is the branch execution unit for the EU.
         """
-        reg = None
-
         def __init__(self, registers):
             """
             This is the constructor for the BEU inside the execution unit.

@@ -7,7 +7,7 @@ b: .word 10, 20, 30, 40, 50
 counter: .word 0
 limit:   .word 5
 
-    .text # We want to compute a = b + c
+    .text # We want to compute a = b * c
 
 # Main invocation point
 main:
