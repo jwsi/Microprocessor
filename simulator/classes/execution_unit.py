@@ -1,5 +1,5 @@
 from classes.register_file import RegisterFile
-from classes.errors import Interrupt, UnsupportedInstruction
+from classes.errors import Interrupt, UnsupportedInstruction, AlreadyExecutingInstruction
 
 
 class ExecutionUnit():
@@ -11,6 +11,7 @@ class ExecutionUnit():
         """
         self.mem = memory
         self.reg = registers # Each EU has it's own register file.
+        self.busy_subunits = []
         # Define capabilities of execution unit.
         if alu:
             self.alu = self.ALU(self.reg)
@@ -30,16 +31,20 @@ class ExecutionUnit():
         try:
             # LOAD/STORE
             if ins.name in ["lw", "sw"]:
+                self._check_subunit_status("lsu")
                 self.lsu.execute(ins, queue)
             # ALU Operations
             elif ins.name in ["add", "sub" "and", "or","xor", "nor", "slt", "slti",
                                "addi", "andi", "ori", "xori", "lui", "sll", "sra"]:
+                self._check_subunit_status("alu")
                 self.alu.execute(ins, queue)
             # FPU Operations
             elif ins.name in ["mult", "div", "mfhi", "mflo"]:
+                self._check_subunit_status("fpu")
                 self.fpu.execute(ins, queue)
             # Branch operations
             elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
+                self._check_subunit_status("beu")
                 return self.beu.execute(ins, queue), queue
             # Syscall
             elif ins.name == "syscall":
@@ -49,6 +54,23 @@ class ExecutionUnit():
         # Catch instructions that cannot be executed by this EU.
         except AttributeError:
             raise UnsupportedInstruction("`" + ins.name + "` on EU: " + str(id(self)))
+
+
+    def _check_subunit_status(self, subunit):
+        """
+        Checks if a EU subunit is busy. If it is, an exception is raised. Otherwise it is marked as busy.
+        :param subunit: String representing subunit.
+        """
+        if subunit in self.busy_subunits:
+            raise AlreadyExecutingInstruction(str(subunit) + " on EU: " + str(id(self)))
+        self.busy_subunits.append(subunit)
+
+
+    def clear_subunits(self):
+        """
+        Marks all subunits as free for execution again.
+        """
+        self.busy_subunits = []
 
 
     class LSU():

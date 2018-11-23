@@ -3,7 +3,7 @@ from classes.instruction import Instruction
 from classes.execution_unit import ExecutionUnit
 from classes.register_file import RegisterFile
 from classes.constants import debug, instruction_time
-from classes.errors import Interrupt
+from classes.errors import Interrupt, AlreadyExecutingInstruction, UnsupportedInstruction
 
 
 class Simulator():
@@ -26,7 +26,10 @@ class Simulator():
         self.pc = pickle.load(f)
         f.close()
         self.register_file[29][1] = (max(self.memory) + 1) + (1000*4) # Initialise the stack pointer (1000 words).
-        self.eu = ExecutionUnit(self.memory, self.register_file)
+        # Define a master execution unit able to execute all instructions.
+        self.master_eu = ExecutionUnit(self.memory, self.register_file)
+        # Define a slave execution unit for ALU and FPU operations.
+        self.slave_eu = ExecutionUnit(self.memory, self.register_file, lsu=False, alu=True, beu=False, fpu=True)
         self.stdscr = stdscr # Define the curses terminal
         if not debug:
             self.setup_screen(input_file) # Setup the initial curses layout
@@ -37,17 +40,21 @@ class Simulator():
         This function fetches the appropriate instruction from memory.
         :return: raw binary instruction (string).
         """
-        raw_instruction = ""
-        try:
-            for i in range(4):
-                raw_instruction += self.memory[self.pc+i]
-            self.pc += 4
-            return {
-                "pc" : self.pc - 4,
-                "raw_instruction" : raw_instruction
-            }
-        except KeyError:
-            return None
+        raw_instructions = []
+        for i in range(2):
+            try:
+                raw_instruction = ""
+                for offset in range(4):
+                    raw_instruction += self.memory[self.pc+offset]
+                raw_instructions.append({
+                    "pc" : self.pc,
+                    "raw_instruction" : raw_instruction
+                })
+            except KeyError:
+                raw_instructions.append(None)
+            finally:
+                self.pc += 4
+        return raw_instructions
 
 
     def decode(self, fetch_object):
@@ -56,7 +63,13 @@ class Simulator():
         :param raw_instruction: binary string of MIPS instruction.
         :return: Instruction object.
         """
-        return Instruction(fetch_object["pc"], fetch_object["raw_instruction"])
+        instructions = []
+        for instruction in fetch_object:
+            if instruction is not None:
+                instructions.append(Instruction(instruction["pc"], instruction["raw_instruction"]))
+            else:
+                instructions.append(None)
+        return instructions
 
 
     def execute(self, pipeline):
@@ -64,24 +77,45 @@ class Simulator():
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
-        try:
-            pc, queue = self.eu.execute(pipeline[self.clock - 1]["decode"])
-        except Interrupt:  # Catch Interrupts
-            if not debug:
-                self.print_state(pipeline)
-            raise Interrupt
-        if pc != self.pc - 8:
-            self.flush_pipeline(pipeline)
-            self.pc = pc
-        return queue
+        queues = [None, None]
+        for i in range(2):
+            if pipeline[self.clock - 1]["decode"][i] is None: # Cannot execute an instruction that doesn't exist.
+                continue
+            try:
+                pc, queues[i] = self.master_eu.execute(pipeline[self.clock - 1]["decode"][i])
+            except AlreadyExecutingInstruction:
+                try:
+                    pc, queues[i] = self.slave_eu.execute(pipeline[self.clock - 1]["decode"][i])
+                except (AlreadyExecutingInstruction, UnsupportedInstruction):
+                    pass
+                    # STALL THE PIPE
+            except Interrupt:  # Catch Interrupts
+                if not debug:
+                    self.print_state(pipeline)
+                raise Interrupt
+
+            if pc != pipeline[self.clock - 1]["decode"][i].pc + 4:
+                self.flush_pipeline(pipeline)
+                self.pc = pc
+                break
+        # Free the EU subunits
+        self.master_eu.clear_subunits()
+        self.slave_eu.clear_subunits()
+        return queues
 
 
-    def writeback(self, queue):
+    def writeback(self, queues):
         """
         This function writes back the pending results from the EUs to the register file.
         :param queue: queue of writebacks.
         """
-        queue.commit(self.register_file, self.stdscr)
+        sleep = False
+        for queue in queues:
+            if queue is not None:
+                sleep = True
+                queue.commit(self.register_file, self.stdscr)
+        if sleep and not debug:
+            time.sleep(instruction_time)
 
 
     def simulate(self):
@@ -90,14 +124,14 @@ class Simulator():
         fetch, decode, execute and writeback.
         """
         stages = {
-            "fetch" : None,
-            "decode" : None,
-            "execute" : None,
+            "fetch" : [None, None],
+            "decode" : [None, None],
+            "execute" : [None, None]
         }
         pipeline = [copy.copy(stages)]
         while True:
             self.clock += 1
-            self.dependency_check(pipeline)
+            # self.dependency_check(pipeline)
             pipeline.append(copy.copy(stages))
             self.advance_pipeline(pipeline)
 
@@ -107,20 +141,23 @@ class Simulator():
         This function will advance the pipeline by one stage.
         :param pipeline: Pipeline to be advanced.
         """
-        self.stdscr.addstr(13, 10, "".ljust(64), curses.color_pair(2)) # Clear warnings
+        if not debug:
+            self.stdscr.addstr(13, 10, "".ljust(64), curses.color_pair(2)) # Clear warnings
         # Fetch Stage in Pipeline
         pipeline[self.clock]["fetch"] = self.fetch()
         # Decode Stage in Pipeline & Display All
-        if pipeline[self.clock - 1]["fetch"] is not None:
+        if pipeline[self.clock - 1]["fetch"] is not [None, None]:
             pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
         # Execute Stage in Pipeline
-        if pipeline[self.clock - 1]["decode"] is not None:
-            pipeline[self.clock]["execute"] = self.execute(pipeline)
+        try:
+            if pipeline[self.clock - 1]["decode"] is not [None, None]:
+                pipeline[self.clock]["execute"] = self.execute(pipeline)
         # Writeback stage in pipeline
-        if not debug:
-            self.print_state(pipeline)
-        if pipeline[self.clock - 1]["execute"] is not None:
-            self.writeback(pipeline[self.clock - 1]["execute"])
+        finally: # Always perform writeback even after execution failure.
+            if not debug:
+                self.print_state(pipeline)
+            if pipeline[self.clock - 1]["execute"] is not [None, None]:
+                self.writeback(pipeline[self.clock - 1]["execute"])
 
 
     def dependency_check(self, pipeline):
@@ -168,7 +205,7 @@ class Simulator():
         This function prints the current state of the simulator to the terminal
         :param instruction: Instruction to be executed.
         """
-        sleep = False
+        sleep = 0
         self.stdscr.addstr(3, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
         self.stdscr.addstr(4, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
         for i in range(34):
@@ -176,25 +213,26 @@ class Simulator():
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i%20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
-        try:
-            self.stdscr.addstr(8, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"]).description(self.register_file).ljust(64)), curses.color_pair(4))
-        except:
-            self.stdscr.addstr(8, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
-        try:
-            self.stdscr.addstr(9, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"].description(self.register_file).ljust(64)), curses.color_pair(1))
-        except:
-            self.stdscr.addstr(9, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
-        try:
-            self.stdscr.addstr(10, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"].description(self.register_file).ljust(64)), curses.color_pair(6))
-        except:
-            self.stdscr.addstr(10, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
-        try:
-            self.stdscr.addstr(11, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"].description(self.register_file).ljust(64)), curses.color_pair(5))
-        except:
-            self.stdscr.addstr(11, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
-            sleep = True
+        for i in range(2):
+            try:
+                self.stdscr.addstr(8+i, 10, "Pipeline Fetch:     " + str(self.decode(pipeline[self.clock]["fetch"])[i].description(self.register_file).ljust(64)), curses.color_pair(4))
+            except:
+                self.stdscr.addstr(8+i, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
+            try:
+                self.stdscr.addstr(10+i, 10, "Pipeline Decode:    " + str(pipeline[self.clock]["decode"][i].description(self.register_file).ljust(64)), curses.color_pair(1))
+            except:
+                self.stdscr.addstr(10+i, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
+            try:
+                self.stdscr.addstr(12+i, 10, "Pipeline Execute:   " + str(pipeline[self.clock-1]["decode"][i].description(self.register_file).ljust(64)), curses.color_pair(6))
+            except:
+                self.stdscr.addstr(12+i, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
+            try:
+                self.stdscr.addstr(14+i, 10, "Pipeline Writeback: " + str(pipeline[self.clock-2]["decode"][i].description(self.register_file).ljust(64)), curses.color_pair(5))
+            except:
+                self.stdscr.addstr(14+i, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
+                sleep += 1
         self.stdscr.refresh()
-        if sleep:
+        if sleep == 2:
             time.sleep(instruction_time) # Need to account for no writeback pause.
 
 

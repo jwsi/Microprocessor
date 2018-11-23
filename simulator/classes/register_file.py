@@ -75,7 +75,7 @@ class RegisterFile():
                     stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
         if not debug:
             stdscr.refresh()
-            time.sleep(instruction_time)
+
 
     def get_dependencies(self):
         dependencies = []
