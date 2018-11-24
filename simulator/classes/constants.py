@@ -1,3 +1,3 @@
 # Time taken per instruction.
-instruction_time = 2
+instruction_time = 10
 debug = False

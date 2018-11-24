@@ -77,7 +77,6 @@ class Simulator():
         :param instruction: Instruction object to be executed.
         """
         queues = [None, None]
-        interrupt = False
         for i in range(2):
             if pipeline[self.clock - 1]["decode"][i] is None: # Cannot execute an instruction that doesn't exist.
                 continue
@@ -89,10 +88,6 @@ class Simulator():
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
                     pass
                     # STALL THE PIPE
-            except Interrupt:  # Catch Interrupts and flag them for raising.
-                interrupt = True
-                continue
-
             if pc != pipeline[self.clock - 1]["decode"][i].pc + 4:
                 self.flush_pipeline(pipeline)
                 self.pc = pc
@@ -100,7 +95,7 @@ class Simulator():
         # Free the EU subunits
         self.master_eu.clear_subunits()
         self.slave_eu.clear_subunits()
-        return queues, interrupt
+        return queues
 
 
     def writeback(self, queues):
@@ -128,39 +123,36 @@ class Simulator():
             "execute" : [None, None]
         }
         pipeline = [copy.copy(stages)]
-        interrupt = False
         while True:
             self.clock += 1
-            # self.dependency_check(pipeline)
+            self.dependency_check(pipeline)
             pipeline.append(copy.copy(stages))
-            interrupt = self.advance_pipeline(pipeline, interrupt)
+            self.advance_pipeline(pipeline)
+            # Check if program is finished.
+            if pipeline[self.clock] == stages:
+                raise Interrupt()
 
 
-    def advance_pipeline(self, pipeline, interrupt):
+    def advance_pipeline(self, pipeline):
         """
         This function will advance the pipeline by one stage.
         :param pipeline: Pipeline to be advanced.
         """
-        last_run = interrupt
         if not debug:
-            self.stdscr.addstr(13, 10, "".ljust(64), curses.color_pair(2)) # Clear warnings
+            self.stdscr.addstr(17, 10, "".ljust(64), curses.color_pair(2)) # Clear warnings
         # Fetch Stage in Pipeline
-        if not interrupt:
-            pipeline[self.clock]["fetch"] = self.fetch()
+        pipeline[self.clock]["fetch"] = self.fetch()
         # Decode Stage in Pipeline & Display All
-        if not interrupt and pipeline[self.clock - 1]["fetch"] is not [None, None]:
+        if pipeline[self.clock - 1]["fetch"] is not [None, None]:
             pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
         # Execute Stage in Pipeline
-        if not interrupt and pipeline[self.clock - 1]["decode"] is not [None, None]:
-            pipeline[self.clock]["execute"], interrupt = self.execute(pipeline)
+        if pipeline[self.clock - 1]["decode"] is not [None, None]:
+            pipeline[self.clock]["execute"] = self.execute(pipeline)
         # Writeback stage in pipeline
         if not debug:
             self.print_state(pipeline)
         if pipeline[self.clock - 1]["execute"] is not [None, None]:
             self.writeback(pipeline[self.clock - 1]["execute"])
-        if last_run: # If there was an interrupt. Writeback last execution results and raise.
-            raise Interrupt()
-        return interrupt
 
 
     def dependency_check(self, pipeline):
@@ -169,28 +161,44 @@ class Simulator():
         If there are dependencies, the pipeline is stalled for one cycle.
         :param pipeline: Pipeline to analyse.
         """
-        if pipeline[self.clock-1]["execute"] is not None and pipeline[self.clock-1]["decode"] is not None:
-            writeback_dependency = pipeline[self.clock-1]["execute"].get_dependencies()
-            execute_dependency = [pipeline[self.clock-1]["decode"].rs]
-            execute_dependency.append(pipeline[self.clock-1]["decode"].rt)
-            execute_dependency.append(pipeline[self.clock - 1]["decode"].rd)
-            # Add hi/low registers for mult/div operations.
-            if pipeline[self.clock - 1]["decode"].name in ["mult", "mflo"]:
-                execute_dependency.append(33)
-            elif pipeline[self.clock - 1]["decode"].name is "div":
-                execute_dependency.append(32, 33)
-            elif pipeline[self.clock - 1]["decode"].name is "mfhi":
-                execute_dependency.append(33)
-            if bool(set(writeback_dependency) & set(execute_dependency)):
-                # If there are dependencies sort them out by writing back first then executing next.
-                pipeline.append(copy.copy(pipeline[self.clock-1]))
-                pipeline[self.clock-1]["decode"] = None
-                pipeline[self.clock]["execute"] = None
-                if not debug:
-                    self.stdscr.addstr(17, 10, "MEMORY RACE - STALLING NOW", curses.color_pair(2))
-                    self.print_state(pipeline)
-                self.writeback(pipeline[self.clock - 1]["execute"])
-                self.clock += 1
+        writeback_dependency, execute_dependency, dependant_instructions = [], [[],[]], []
+        for i in range(2):
+            if pipeline[self.clock - 1]["execute"][i] is not None and pipeline[self.clock-1]["decode"][i] is not None:
+                writeback_dependency += pipeline[self.clock-1]["execute"][i].get_dependencies()
+                execute_dependency[i].append(pipeline[self.clock-1]["decode"][i].rs)
+                execute_dependency[i].append(pipeline[self.clock-1]["decode"][i].rt)
+                execute_dependency[i].append(pipeline[self.clock - 1]["decode"][i].rd)
+                # Add hi/low registers for mult/div operations.
+                if pipeline[self.clock - 1]["decode"][i].name in ["mult", "mflo"]:
+                    execute_dependency[i].append(33)
+                elif pipeline[self.clock - 1]["decode"][i].name is "div":
+                    execute_dependency[i].append(32, 33)
+                elif pipeline[self.clock - 1]["decode"][i].name is "mfhi":
+                    execute_dependency[i].append(33)
+                if bool(set(writeback_dependency) & set(execute_dependency[i])):
+                    dependant_instructions.append(i)
+        if dependant_instructions != []: # If dependent instructions exist, stall the pipe.
+            return self.stall_pipeline(pipeline, dependant_instructions)
+
+
+    def stall_pipeline(self, pipeline, dependent_instructions):
+        """
+        Stalls the pipeline if there are dependent instructions queued.
+        :param pipeline: Pipeline to stall.
+        :param dependent_instructions: list of dependent instruction numbers.
+        """
+        # If there are dependencies sort them out by writing back first then executing next.
+        pipeline.append(copy.deepcopy(pipeline[self.clock - 1]))
+        for instruction_number in dependent_instructions:
+            pipeline[self.clock - 1]["decode"][instruction_number] = None
+            if len(dependent_instructions) == 1:
+                pipeline[self.clock]["decode"][(instruction_number + 1)%2] = None
+        # pipeline[self.clock]["execute"] = self.execute(pipeline)
+        if not debug:
+            self.stdscr.addstr(17, 10, "MEMORY RACE - STALLING NOW", curses.color_pair(2))
+            self.print_state(pipeline)
+        self.writeback(pipeline[self.clock - 1]["execute"])
+        self.clock += 1
 
 
     def flush_pipeline(self, pipeline):

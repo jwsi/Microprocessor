@@ -2,12 +2,6 @@
     .text
 main:
     addi $v0, $zero, 10
-    addi $v1, $zero, 20
-    addi $t1, $zero, 60
-    j end
-    addi $s0, $zero, 100
-    sll $zero, $zero, 0 # NOP
-
-end:
-    addi $a3, $zero, 200
-    syscall # Final syscall
+    sll $zero, $zero, 0
+    addi $v1, $v0, 2
+    addi $v0, $zero, 5
