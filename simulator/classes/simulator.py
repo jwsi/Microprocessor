@@ -78,6 +78,7 @@ class Simulator():
         :param instruction: Instruction object to be executed.
         """
         queues = [None, None]
+        interrupt = False
         for i in range(2):
             if pipeline[self.clock - 1]["decode"][i] is None: # Cannot execute an instruction that doesn't exist.
                 continue
@@ -89,10 +90,9 @@ class Simulator():
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
                     pass
                     # STALL THE PIPE
-            except Interrupt:  # Catch Interrupts
-                if not debug:
-                    self.print_state(pipeline)
-                raise Interrupt
+            except Interrupt:  # Catch Interrupts and flag them for raising.
+                interrupt = True
+                continue
 
             if pc != pipeline[self.clock - 1]["decode"][i].pc + 4:
                 self.flush_pipeline(pipeline)
@@ -101,7 +101,7 @@ class Simulator():
         # Free the EU subunits
         self.master_eu.clear_subunits()
         self.slave_eu.clear_subunits()
-        return queues
+        return queues, interrupt
 
 
     def writeback(self, queues):
@@ -129,35 +129,39 @@ class Simulator():
             "execute" : [None, None]
         }
         pipeline = [copy.copy(stages)]
+        interrupt = False
         while True:
             self.clock += 1
             # self.dependency_check(pipeline)
             pipeline.append(copy.copy(stages))
-            self.advance_pipeline(pipeline)
+            interrupt = self.advance_pipeline(pipeline, interrupt)
 
 
-    def advance_pipeline(self, pipeline):
+    def advance_pipeline(self, pipeline, interrupt):
         """
         This function will advance the pipeline by one stage.
         :param pipeline: Pipeline to be advanced.
         """
+        last_run = interrupt
         if not debug:
             self.stdscr.addstr(13, 10, "".ljust(64), curses.color_pair(2)) # Clear warnings
         # Fetch Stage in Pipeline
-        pipeline[self.clock]["fetch"] = self.fetch()
+        if not interrupt:
+            pipeline[self.clock]["fetch"] = self.fetch()
         # Decode Stage in Pipeline & Display All
-        if pipeline[self.clock - 1]["fetch"] is not [None, None]:
+        if not interrupt and pipeline[self.clock - 1]["fetch"] is not [None, None]:
             pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
         # Execute Stage in Pipeline
-        try:
-            if pipeline[self.clock - 1]["decode"] is not [None, None]:
-                pipeline[self.clock]["execute"] = self.execute(pipeline)
+        if not interrupt and pipeline[self.clock - 1]["decode"] is not [None, None]:
+            pipeline[self.clock]["execute"], interrupt = self.execute(pipeline)
         # Writeback stage in pipeline
-        finally: # Always perform writeback even after execution failure.
-            if not debug:
-                self.print_state(pipeline)
-            if pipeline[self.clock - 1]["execute"] is not [None, None]:
-                self.writeback(pipeline[self.clock - 1]["execute"])
+        if not debug:
+            self.print_state(pipeline)
+        if pipeline[self.clock - 1]["execute"] is not [None, None]:
+            self.writeback(pipeline[self.clock - 1]["execute"])
+        if last_run: # If there was an interrupt. Writeback last execution results and raise.
+            raise Interrupt()
+        return interrupt
 
 
     def dependency_check(self, pipeline):
