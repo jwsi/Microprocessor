@@ -14,7 +14,6 @@ class Simulator():
     pc = None
     clock = 0
     register_file = RegisterFile().reg # Create the parent register file for the simulator
-    strikes = 0
 
     def __init__(self, input_file, stdscr):
         """
@@ -188,7 +187,7 @@ class Simulator():
                 pipeline[self.clock-1]["decode"] = None
                 pipeline[self.clock]["execute"] = None
                 if not debug:
-                    self.stdscr.addstr(13, 10, "MEMORY RACE - STALLING NOW", curses.color_pair(2))
+                    self.stdscr.addstr(17, 10, "MEMORY RACE - STALLING NOW", curses.color_pair(2))
                     self.print_state(pipeline)
                 self.writeback(pipeline[self.clock - 1]["execute"])
                 self.clock += 1
@@ -199,9 +198,9 @@ class Simulator():
         This function flushes a particular pipeline.
         :param pipeline: Pipeline to be flushed.
         """
-        self.stdscr.addstr(13, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE", curses.color_pair(2))
-        pipeline[self.clock]["fetch"] = None
-        pipeline[self.clock]["decode"] = None
+        self.stdscr.addstr(17, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE", curses.color_pair(2))
+        pipeline[self.clock]["fetch"] = [None, None]
+        pipeline[self.clock]["decode"] = [None, None]
 
 
     def print_state(self, pipeline):
