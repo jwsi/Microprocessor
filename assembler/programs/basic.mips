@@ -1,0 +1,6 @@
+    .data
+    .text
+main:
+    addi $v0, $zero, 10
+    addi $v1, $zero, 20
+    syscall # Final syscall
