@@ -1,7 +1,7 @@
     .data
     .text
 main:
-    addi $v0, $zero, 10
-    sll $zero, $zero, 0
-    addi $v1, $v0, 2
-    addi $v0, $zero, 5
+    # addi $v0, $zero, 10
+    # sll $zero, $zero, 0
+    addi $v1, $zero, 2
+    addi $v0, $v1, 5

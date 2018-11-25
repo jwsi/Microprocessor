@@ -28,7 +28,7 @@ class Simulator():
         # Define a master execution unit able to execute all instructions.
         self.master_eu = ExecutionUnit(self.memory, self.register_file)
         # Define a slave execution unit for ALU and FPU operations.
-        self.slave_eu = ExecutionUnit(self.memory, self.register_file, lsu=False, alu=True, beu=False, fpu=True)
+        self.slave_eu = ExecutionUnit(self.memory, self.register_file)
         self.stdscr = stdscr # Define the curses terminal
         if not debug:
             self.setup_screen(input_file) # Setup the initial curses layout
@@ -125,7 +125,9 @@ class Simulator():
         pipeline = [copy.copy(stages)]
         while True:
             self.clock += 1
-            self.dependency_check(pipeline)
+            while self.writeback_dependency_check(pipeline):
+                pass
+            self.inter_instruction_depenedency_check(pipeline)
             pipeline.append(copy.copy(stages))
             self.advance_pipeline(pipeline)
             # Check if program is finished.
@@ -155,16 +157,18 @@ class Simulator():
             self.writeback(pipeline[self.clock - 1]["execute"])
 
 
-    def dependency_check(self, pipeline):
+    def writeback_dependency_check(self, pipeline):
         """
         This function analyses instructions in the pipeline for dependencies.
         If there are dependencies, the pipeline is stalled for one cycle.
         :param pipeline: Pipeline to analyse.
         """
         writeback_dependency, execute_dependency, dependant_instructions = [], [[],[]], []
-        for i in range(2):
-            if pipeline[self.clock - 1]["execute"][i] is not None and pipeline[self.clock-1]["decode"][i] is not None:
+        for i in range(2): # Add writeback dependencies
+            if pipeline[self.clock - 1]["execute"][i] is not None:
                 writeback_dependency += pipeline[self.clock-1]["execute"][i].get_dependencies()
+        for i in range(2): # Add execute dependencies
+            if pipeline[self.clock - 1]["decode"][i] is not None:
                 execute_dependency[i].append(pipeline[self.clock-1]["decode"][i].rs)
                 execute_dependency[i].append(pipeline[self.clock-1]["decode"][i].rt)
                 execute_dependency[i].append(pipeline[self.clock - 1]["decode"][i].rd)
@@ -178,7 +182,42 @@ class Simulator():
                 if bool(set(writeback_dependency) & set(execute_dependency[i])):
                     dependant_instructions.append(i)
         if dependant_instructions != []: # If dependent instructions exist, stall the pipe.
-            return self.stall_pipeline(pipeline, dependant_instructions)
+            self.stall_pipeline(pipeline, dependant_instructions)
+            return True
+        return False
+
+
+    def inter_instruction_depenedency_check(self, pipeline):
+        """
+        If two instructions have dependencies, this function will execute them separately.
+        :param pipeline: Pipeline to inspect.
+        """
+        instructions = pipeline[self.clock-1]["decode"]
+        registers = [[], []]
+        if None not in instructions: # No dependencies if only one instruction is executed.
+            for i in range(2):
+                registers[i].append(instructions[i].rs)
+                registers[i].append(instructions[i].rt)
+                registers[i].append(instructions[i].rd)
+                if instructions[i].name in ["mult", "div", "mflo"]:
+                    registers[i].append(33)
+                if instructions[i].name in ["div", "mfhi"]:
+                    registers[i].append(32)
+                if instructions[i].name in ["jal"]:
+                    registers[i].append(31)
+                registers[i] = [reg for reg in registers[i] if reg is not None and reg != 0] # Remove false dependencies
+        if bool(set(registers[0]) & set(registers[1])):
+            pipeline.append(copy.deepcopy(pipeline[self.clock - 1]))
+            pipeline[self.clock - 1]["decode"][1] = None
+            pipeline[self.clock]["decode"][0] = None
+            pipeline[self.clock]["execute"] = self.execute(pipeline)
+            if not debug:
+                self.stdscr.addstr(17, 10, "INTER INSTRUCTION DEPENDENCY - SEPARATING NOW".ljust(64), curses.color_pair(2))
+                self.print_state(pipeline)
+            if pipeline[self.clock - 1]["execute"] is not [None, None]:
+                self.writeback(pipeline[self.clock - 1]["execute"])
+            self.clock += 1
+            self.stall_pipeline(pipeline, [1]) # Writeback 0th instruction first
 
 
     def stall_pipeline(self, pipeline, dependent_instructions):
@@ -193,9 +232,10 @@ class Simulator():
             pipeline[self.clock - 1]["decode"][instruction_number] = None
             if len(dependent_instructions) == 1:
                 pipeline[self.clock]["decode"][(instruction_number + 1)%2] = None
-        # pipeline[self.clock]["execute"] = self.execute(pipeline)
+            pipeline[self.clock]["execute"][instruction_number] = None
+        pipeline[self.clock]["execute"] = self.execute(pipeline)
         if not debug:
-            self.stdscr.addstr(17, 10, "MEMORY RACE - STALLING NOW", curses.color_pair(2))
+            self.stdscr.addstr(17, 10, "MEMORY RACE - STALLING NOW".ljust(64), curses.color_pair(2))
             self.print_state(pipeline)
         self.writeback(pipeline[self.clock - 1]["execute"])
         self.clock += 1
@@ -206,7 +246,8 @@ class Simulator():
         This function flushes a particular pipeline.
         :param pipeline: Pipeline to be flushed.
         """
-        self.stdscr.addstr(17, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE", curses.color_pair(2))
+        if not debug:
+            self.stdscr.addstr(17, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
         pipeline[self.clock]["fetch"] = [None, None]
         pipeline[self.clock]["decode"] = [None, None]
 
