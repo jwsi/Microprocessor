@@ -28,7 +28,7 @@ class Simulator():
         # Define a master execution unit able to execute all instructions.
         self.master_eu = ExecutionUnit(self.memory, self.register_file)
         # Define a slave execution unit for ALU and FPU operations.
-        self.slave_eu = ExecutionUnit(self.memory, self.register_file)
+        self.slave_eu = ExecutionUnit(self.memory, self.register_file, alu=True, fpu=True, lsu=False, beu=False)
         self.stdscr = stdscr # Define the curses terminal
         if not debug:
             self.setup_screen(input_file) # Setup the initial curses layout
@@ -86,8 +86,7 @@ class Simulator():
                 try:
                     pc, queues[i] = self.slave_eu.execute(pipeline[self.clock - 1]["decode"][i])
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
-                    pass
-                    # STALL THE PIPE
+                    raise AlreadyExecutingInstruction("Dispatcher Failed...")
             if pc != pipeline[self.clock - 1]["decode"][i].pc + 4:
                 self.flush_pipeline(pipeline)
                 self.pc = pc
@@ -206,7 +205,7 @@ class Simulator():
                 if instructions[i].name in ["jal"]:
                     registers[i].append(31)
                 registers[i] = [reg for reg in registers[i] if reg is not None and reg != 0] # Remove false dependencies
-        if bool(set(registers[0]) & set(registers[1])):
+        if bool(set(registers[0]) & set(registers[1])) or self.hardware_limitation_check(instructions):
             pipeline.append(copy.deepcopy(pipeline[self.clock - 1]))
             pipeline[self.clock - 1]["decode"][1] = None
             pipeline[self.clock]["decode"][0] = None
@@ -217,7 +216,31 @@ class Simulator():
             if pipeline[self.clock - 1]["execute"] is not [None, None]:
                 self.writeback(pipeline[self.clock - 1]["execute"])
             self.clock += 1
-            self.stall_pipeline(pipeline, [1]) # Writeback 0th instruction first
+            if bool(set(registers[0]) & set(registers[1])):
+                self.stall_pipeline(pipeline, [1]) # Writeback 0th instruction first if there is a memory race.
+
+
+    def hardware_limitation_check(self, instructions):
+        """
+        Given a list of instructions this function will determine if they can be executed concurrently.
+        This is based on hardware availability such as ALUs available etc...
+        :param instructions: List of instructions to inspect.
+        :return: Boolean representing whether the instructions should be separated.
+        """
+        lsu_list = ["lw", "sw"]
+        beu_list = ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]
+        lsu_instructions, beu_instructions = 0, 0
+        if None in instructions:
+            return False
+        for i in range(2):
+            if instructions[i].name in lsu_list:
+                lsu_instructions += 1
+            elif instructions[i].name in beu_list:
+                beu_instructions += 1
+        if lsu_instructions > 1 or beu_instructions > 1:
+            return True
+        return False
+
 
 
     def stall_pipeline(self, pipeline, dependent_instructions):
