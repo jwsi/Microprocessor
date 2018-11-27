@@ -19,13 +19,17 @@ class Instruction():
     shift = None
     address = None
 
-    def __init__(self, pc, raw_instruction):
+    def __init__(self, instruction):
         """
         Instruction class constructor.
         :param raw_instruction: String containing fetched instruction from memory.
         """
-        self.pc = pc
-        self.raw_instruction = raw_instruction
+        self.pc = instruction["pc"]
+        self.raw_instruction = instruction["raw_instruction"]
+        try:
+            self.prediction = instruction["prediction"] # If there is a predicted pc outcome then store it.
+        except KeyError:
+            self.prediction = None
         self.decode()
 
 

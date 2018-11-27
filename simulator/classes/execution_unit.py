@@ -1,5 +1,6 @@
 from classes.register_file import RegisterFile
 from classes.errors import Interrupt, UnsupportedInstruction, AlreadyExecutingInstruction
+from classes.branch_predictor import BranchPredictor
 
 
 class ExecutionUnit():
@@ -208,6 +209,7 @@ class ExecutionUnit():
             This is the constructor for the BEU inside the execution unit.
             """
             self.reg = registers
+            self.branch_predictor = BranchPredictor()
 
 
         def execute(self, ins, queue):
@@ -217,15 +219,19 @@ class ExecutionUnit():
             """
             if ins.name == "beq":
                 if self.reg[ins.rs][1] == self.reg[ins.rt][1]:
+                    self.branch_predictor.update_prediction(True)
                     return ins.pc + (ins.imm << 2)
             elif ins.name == "bne":
                 if self.reg[ins.rs][1] != self.reg[ins.rt][1]:
+                    self.branch_predictor.update_prediction(True)
                     return ins.pc + (ins.imm << 2)
             elif ins.name == "blez":
                 if self.reg[ins.rs][1] <= 0:
+                    self.branch_predictor.update_prediction(True)
                     return ins.pc + (ins.imm << 2)
             elif ins.name == "bgtz":
                 if self.reg[ins.rs][1] > 0:
+                    self.branch_predictor.update_prediction(True)
                     return ins.pc + (ins.imm << 2)
             elif ins.name == "j":
                 return ins.address
@@ -234,4 +240,5 @@ class ExecutionUnit():
                 return ins.address
             elif ins.name == "jr":
                 return self.reg[ins.rs][1]
+            self.branch_predictor.update_prediction(False)
             return ins.pc + 4

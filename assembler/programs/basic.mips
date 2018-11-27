@@ -1,7 +1,13 @@
     .data
     .text
 main:
-    # addi $v0, $zero, 10
-    # sll $zero, $zero, 0
-    addi $v1, $zero, 2
-    addi $v0, $v1, 5
+    sll $zero, $zero, 0
+    sll $zero, $zero, 0
+    jal loop
+    sll $zero, $zero, 0
+    sll $zero, $zero, 0
+    sll $zero, $zero, 0
+    sll $zero, $zero, 0
+loop:
+    addi $s0, $zero, 4
+    jr $ra

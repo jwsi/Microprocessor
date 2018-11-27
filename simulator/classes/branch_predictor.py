@@ -22,7 +22,7 @@ class BranchPredictor:
         Based on the current state, make a prediction regarding the outcome of the next branch instruction.
         :return: Boolean representing whether the branch should be taken.
         """
-        if self.current_state in [self.State.wt, self.State.st]:
+        if self.current_state in [self.State.weakly_taken, self.State.strongly_taken]:
             return True
         return False
 
@@ -34,8 +34,8 @@ class BranchPredictor:
         :param branch_taken: Boolean representing whether the branch was actually taken.
         """
         if branch_taken:
-            cls.current_state = min(cls.current_state + 1, 3)
+            cls.current_state = cls.State(min(cls.current_state + 1, 3))
         else:
-            cls.current_state = max(cls.current_state - 1, 0)
+            cls.current_state = cls.State(max(cls.current_state - 1, 0))
 
 
