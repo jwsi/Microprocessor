@@ -32,8 +32,6 @@ class Simulator():
         self.slave_eu = ExecutionUnit(self.memory, self.register_file, alu=True, fpu=True, lsu=False, beu=False)
         # Define a branch predictor to optimise the pipeline.
         self.branch_predictor = BranchPredictor()
-        self.total_predictions = 1
-        self.incorrect_predictions = 0
         # Define a return address stack for predicting JR calls.
         self.return_address_stack = []
         self.stdscr = stdscr # Define the curses terminal
@@ -52,35 +50,16 @@ class Simulator():
                 raw_instruction = ""
                 for offset in range(4):
                     raw_instruction += self.memory[self.pc+offset]
+                prediction = self.branch_predictor.make_prediction(raw_instruction, self.pc)
                 raw_instructions.append({
                     "pc" : self.pc,
-                    "raw_instruction" : raw_instruction
+                    "raw_instruction" : raw_instruction,
+                    "prediction" : prediction
                 })
+                self.pc = prediction
             except KeyError:
                 raw_instructions.append(None)
                 self.pc += 4
-                continue
-            if raw_instruction[0:6] in ["000010", "000011"]: # If J or JAL
-                if raw_instruction[0:6] == "000011": # If JAL, make a prediction on the return address.
-                    self.return_address_stack.append(self.pc+4)
-                self.pc = int(raw_instruction[6:32], 2)
-                continue
-            elif raw_instruction[0:6] == "000000" and raw_instruction[26:32] == "001000": # If JR
-                try:
-                    self.pc = self.return_address_stack.pop() # Make a prediction about the return address.
-                    raw_instructions[i]["prediction"] = self.pc
-                    self.total_predictions += 1
-                    continue
-                except IndexError:
-                    pass
-            elif raw_instruction[0:6] in ["000100", "000101", "000110", "000111"]: # If BEQ, BNE, BLEZ or BGTZ
-                taken = self.branch_predictor.make_prediction()
-                if taken:
-                    self.pc += 4 * int(raw_instruction[16:32], 2)
-                    raw_instructions[i]["prediction"] = self.pc
-                    self.total_predictions += 1
-                    continue
-            self.pc += 4
         return raw_instructions
 
 
@@ -117,7 +96,7 @@ class Simulator():
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
                     raise AlreadyExecutingInstruction("Dispatcher Failed...")
             if instruction.name in ["beq", "bne", "blez", "bgtz", "jr"] and pc != instruction.prediction:
-                self.incorrect_predictions += 1
+                self.branch_predictor.incorrect_predictions += 1
                 self.flush_pipeline(pipeline)
                 self.pc = pc
                 break
@@ -315,7 +294,7 @@ class Simulator():
         self.stdscr.addstr(4, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
         self.stdscr.addstr(5, 10, "Branch Prediction Rate: " +
                            str(
-                               round((self.total_predictions-self.incorrect_predictions)/self.total_predictions*100, 2))
+                               round((self.branch_predictor.total_predictions-self.branch_predictor.incorrect_predictions)/self.branch_predictor.total_predictions*100, 2))
                            + "%")
         for i in range(34):
             offset = 100
