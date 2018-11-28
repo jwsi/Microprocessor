@@ -4,7 +4,7 @@ from classes.branch_predictor import BranchPredictor
 
 
 class ExecutionUnit():
-    def __init__(self, memory, registers, alu=True, lsu=True, fpu=True, beu=True):
+    def __init__(self, memory, registers, alu=True, lsu=True, beu=True):
         """
         Constructor for ExecutionUnit class.
         :param instruction: Instruction object to execute.
@@ -18,8 +18,6 @@ class ExecutionUnit():
             self.alu = self.ALU(self.reg)
         if lsu:
             self.lsu = self.LSU(self.reg, self.mem)
-        if fpu:
-            self.fpu = self.FPU(self.reg)
         if beu:
             self.beu = self.BEU(self.reg)
 
@@ -36,13 +34,10 @@ class ExecutionUnit():
                 self.lsu.execute(ins, queue)
             # ALU Operations
             elif ins.name in ["add", "sub" "and", "or","xor", "nor", "slt", "slti",
-                               "addi", "andi", "ori", "xori", "lui", "sll", "sra"]:
+                              "addi", "andi", "ori", "xori", "lui", "sll", "sra",
+                              "mult", "div", "mfhi", "mflo"]:
                 self._check_subunit_status("alu")
                 self.alu.execute(ins, queue)
-            # FPU Operations
-            elif ins.name in ["mult", "div", "mfhi", "mflo"]:
-                self._check_subunit_status("fpu")
-                self.fpu.execute(ins, queue)
             # Branch operations
             elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
                 self._check_subunit_status("beu")
@@ -171,25 +166,7 @@ class ExecutionUnit():
                 queue.write(ins.rd, self.reg[ins.rt][1] << ins.shift)
             elif ins.name == "sra":
                 queue.write(ins.rd, self.reg[ins.rt][1] >> ins.shift)
-
-
-    class FPU():
-        """
-        This is the floating point unit for the EU.
-        """
-        def __init__(self, registers):
-            """
-            This is the constructor for the FPU inside the execution unit.
-            """
-            self.reg = registers
-
-
-        def execute(self, ins, queue):
-            """
-            Given an FPU Instruction object, it will execute it.
-            :param ins: Instruction object.
-            """
-            if ins.name == "mult":
+            elif ins.name == "mult":
                 queue.write(33, self.reg[ins.rs][1] * self.reg[ins.rt][1])
             elif ins.name == "div":
                 queue.write(33, self.reg[ins.rs][1] // self.reg[ins.rt][1])
