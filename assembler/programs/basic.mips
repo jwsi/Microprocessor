@@ -1,13 +1,6 @@
     .data
     .text
 main:
+    addi $t1, $zero, 2    # Load address of a into t1
+    addi $t2, $t1, 3      # Load address of b into t2
     sll $zero, $zero, 0
-    sll $zero, $zero, 0
-    jal loop
-    sll $zero, $zero, 0
-    sll $zero, $zero, 0
-    sll $zero, $zero, 0
-    sll $zero, $zero, 0
-loop:
-    addi $s0, $zero, 4
-    jr $ra

@@ -48,4 +48,4 @@ multiply:
 
 # Exit point
 end:
-    syscall   # Exit
+    sll $zero, $zero, 0   # Final no-op

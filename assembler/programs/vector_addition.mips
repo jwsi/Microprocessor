@@ -6,7 +6,7 @@ b: .word 1, 2, 3, 4, 5
 c: .word 10, 20, 30, 40, 50
 # Define loop limits
 counter: .word 0
-limit:   .word 5
+limit:   .word 1
 
     .text # We want to compute a = b + c
 
@@ -34,4 +34,4 @@ loop:
 
 # Exit point
 end:
-    syscall   # Final nop
+    sll $zero, $zero, 0   # Final nop

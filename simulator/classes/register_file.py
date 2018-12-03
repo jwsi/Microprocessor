@@ -77,9 +77,8 @@ class RegisterFile():
             stdscr.refresh()
 
 
-    def get_dependencies(self):
-        dependencies = []
-        for register, contents in self.reg.items():
-            if contents[2]:
-                dependencies.append(register)
-        return dependencies
+    def no_writebacks(self):
+        for reg in self.reg:
+            if self.reg[reg][2]:
+                return False
+        return True
