@@ -149,7 +149,7 @@ class Simulator():
         :param pipeline: Pipeline to be advanced.
         """
         if not debug:
-            self.stdscr.addstr(27, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
+            self.stdscr.addstr(26, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
         # Fetch Stage in Pipeline
         if len(self.reservation_station.queue) <= 12:
             self.raw_instructions = self.fetch()
@@ -174,7 +174,7 @@ class Simulator():
         :param pipeline: Pipeline to be flushed.
         """
         if not debug:
-            self.stdscr.addstr(27, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
+            self.stdscr.addstr(26, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
         self.raw_instructions = [None for _ in range(N)] # Clear anything already fetched.
         self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
 
@@ -261,8 +261,8 @@ class Simulator():
         """
         Displays the final values of the return registers and does a memory dump.
         """
-        self.stdscr.addstr(29, 0, "Memory Dump:", curses.A_BOLD)
-        self.stdscr.addstr(30, 0, str(self.memory), curses.color_pair(3))
+        self.stdscr.addstr(28, 0, "Memory Dump:", curses.A_BOLD)
+        self.stdscr.addstr(29, 0, str(self.memory), curses.color_pair(3))
         self.stdscr.addstr(4, 100, str(self.register_file[2][:2]), curses.color_pair(3))
         self.stdscr.addstr(5, 100, str(self.register_file[3][:2]), curses.color_pair(3))
         self.stdscr.refresh()
