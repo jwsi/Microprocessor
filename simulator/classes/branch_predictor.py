@@ -1,4 +1,5 @@
 from enum import IntEnum
+import curses
 
 class BranchPredictor:
     """
@@ -62,5 +63,23 @@ class BranchPredictor:
             cls.current_state = cls.State(min(cls.current_state + 1, 3))
         else:
             cls.current_state = cls.State(max(cls.current_state - 1, 0))
+
+
+    def print(self, stdscr):
+        """
+        Prints the contents of the reservation station to the terminal.
+        :param stdscr: terminal to print to.
+        """
+        stdscr.addstr(20, 150, "BRANCH PREDICTOR".ljust(48), curses.color_pair(2))
+        stdscr.addstr(21, 150, "Current State: " + str(self.current_state).ljust(24), curses.color_pair(4))
+        stdscr.addstr(22, 150,
+                      "Branch Prediction Rate: " +
+                      str(round(
+                          (self.total_predictions - self.incorrect_predictions)
+                          / self.total_predictions * 100,
+                          2))
+                      + "%",
+                      curses.color_pair(4))
+
 
 

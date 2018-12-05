@@ -155,8 +155,8 @@ class ReservationStation:
         Prints the contents of the reservation station to the terminal.
         :param stdscr: terminal to print to.
         """
-        stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.color_pair(3))
-        stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(3))
+        stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.color_pair(6))
+        stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(6))
         for i in range(16):
             stdscr.addstr(4 + i, 150, "".ljust(48))
         for i in range(min(16, len(self.queue))):

@@ -82,12 +82,13 @@ class Simulator():
         return instructions
 
 
-    def execute(self, pipeline, bypass):
+    def execute(self, bypass):
         """
         This function executes the Instruction object.
         :param instruction: Instruction object to be executed.
         """
         queue = RegisterFile()
+        self.now_executing = []
         instructions = self.reservation_station.get_ready_instructions()
         for instruction in instructions:
             try:
@@ -98,10 +99,11 @@ class Simulator():
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
                     raise AlreadyExecutingInstruction("Dispatcher Failed...")
             self.instructions_executed += 1
+            self.now_executing.append(instruction)
             if instruction.name in ["beq", "bne", "blez", "bgtz", "jr"] and pc != instruction.prediction:
                 self.branch_predictor.incorrect_predictions += 1
                 self.reservation_station.clear()
-                self.flush_pipeline(pipeline)
+                self.flush_pipeline()
                 self.pc = pc
                 break
         # Free the EU subunits
@@ -123,73 +125,76 @@ class Simulator():
         The main simulate function controlling the:
         fetch, decode, execute and writeback.
         """
-        stages = {
-            "fetch": [None for _ in range(N)],
-            "decode": [None for _ in range(N)],
-            "execute": None
-        }
-        pipeline = [copy.copy(stages)]
+        empty_state = [None for _ in range(N)]
+        self.raw_instructions = empty_state
+        self.prev_raw_instructions = empty_state
+        self.exec_results = RegisterFile() # Blank register files.
+        self.prev_exec_results = RegisterFile()
+        self.now_executing, self.now_writing = [], []
         while True:
             self.clock += 1
-            pipeline.append(copy.copy(stages))
-            self.advance_pipeline(pipeline)
+            self.advance_pipeline()
             # Check if program is finished.
-            if pipeline[self.clock]["fetch"]  == stages["fetch"]  and \
-               pipeline[self.clock]["decode"] == stages["decode"] and \
-               len(self.reservation_station.queue) == 0           and \
-               pipeline[self.clock]["execute"].no_writebacks():
+            finished = self.raw_instructions == empty_state # Nothing fetched
+            finished &= self.prev_raw_instructions == empty_state # Nothing to decode
+            finished &= len(self.reservation_station.queue) == 0 # Nothing to execute
+            finished &= self.prev_exec_results.no_writebacks() # Nothing to writeback
+            if finished:
                 raise Interrupt()
 
 
-    def advance_pipeline(self, pipeline):
+    def advance_pipeline(self):
         """
         This function will advance the pipeline by one stage.
         :param pipeline: Pipeline to be advanced.
         """
         if not debug:
-            self.stdscr.addstr(26, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
+            self.stdscr.addstr(27, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
         # Fetch Stage in Pipeline
         if len(self.reservation_station.queue) <= 12:
-            pipeline[self.clock]["fetch"] = self.fetch()
+            self.raw_instructions = self.fetch()
         # Execute Stage in Pipeline
-        pipeline[self.clock]["execute"] = self.execute(pipeline, pipeline[self.clock - 1]["execute"])
+        self.exec_results = self.execute(self.prev_exec_results)
         # Decode Stage in Pipeline & Display All
-        if pipeline[self.clock - 1]["fetch"] != [None for _ in range(N)]:
-            self.decode(pipeline[self.clock - 1]["fetch"])
-        # Writeback stage in pipeline
-        if pipeline[self.clock - 1]["execute"] is not None:
-            self.writeback(pipeline[self.clock - 1]["execute"])
+        if self.prev_raw_instructions != [None for _ in range(N)]:
+            self.decode(self.prev_raw_instructions)
         if not debug:
-            self.print_state(pipeline)
+            self.print_state()
+        # Writeback stage in pipeline
+        self.writeback(self.prev_exec_results)
+
+        self.prev_raw_instructions, self.raw_instructions = self.raw_instructions, [None for _ in range(N)]
+        self.prev_exec_results = self.exec_results
+        self.now_writing = self.now_executing
 
 
-    def flush_pipeline(self, pipeline):
+    def flush_pipeline(self):
         """
         This function flushes a particular pipeline.
         :param pipeline: Pipeline to be flushed.
         """
         if not debug:
-            self.stdscr.addstr(26, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
-        pipeline[self.clock]["fetch"] = [None, None, None, None] # Clear anything already fetched.
-        pipeline[self.clock-1]["fetch"] = [None, None, None, None] # Clear anything about to be decoded.
-        pipeline[self.clock]["decode"] = [None, None, None, None] # Clear anything decoded already.
+            self.stdscr.addstr(27, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
+        self.raw_instructions = [None for _ in range(N)] # Clear anything already fetched.
+        self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
 
 
-    def print_state(self, pipeline):
+    def print_state(self):
         """
         This function prints the current state of the simulator to the terminal
-        :param instruction: Instruction to be executed.
         """
-        sleep = 0
-        self.stdscr.addstr(3, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
-        self.stdscr.addstr(4, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
-        self.stdscr.addstr(5, 10, "Instructions Per Cycle: " + str(round(self.instructions_executed/self.clock, 2)), curses.color_pair(3))
-        self.stdscr.addstr(6, 10, "Branch Prediction Rate: " +
-                           str(
-                               round((
-                                                 self.branch_predictor.total_predictions - self.branch_predictor.incorrect_predictions) / self.branch_predictor.total_predictions * 100,
-                                     2))
-                           + "%")
+        self.stdscr.addstr(3, 10,
+                           "Program Counter: "
+                           + str(self.pc),
+                           curses.color_pair(2))
+        self.stdscr.addstr(4, 10,
+                           "Clock Cycles Taken: "
+                           + str(self.clock),
+                           curses.color_pair(3))
+        self.stdscr.addstr(5, 10,
+                           "Instructions Per Cycle: "
+                           + str(round(self.instructions_executed/self.clock, 2)),
+                           curses.color_pair(3))
         for i in range(34):
             offset = 100
             if i > 20:
@@ -197,30 +202,43 @@ class Simulator():
             self.stdscr.addstr(i % 20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
         for i in range(4):
             try:
-                self.stdscr.addstr(9 + i, 10, "Pipeline Fetch:     " + str(
-                    Instruction(pipeline[self.clock]["fetch"][i]).description().ljust(64)),
+                self.stdscr.addstr(9 + i, 10,
+                                   "Pipeline Fetch:     "
+                                   + str(Instruction(self.raw_instructions[i]).description().ljust(64)),
                                    curses.color_pair(4))
             except:
-                self.stdscr.addstr(9 + i, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
+                self.stdscr.addstr(9 + i, 10,
+                                   "Pipeline Fetch:     Empty".ljust(72),
+                                   curses.color_pair(4))
             try:
-                self.stdscr.addstr(13 + i, 10, "Pipeline Decode:    " + str(
-                    pipeline[self.clock]["decode"][i].description().ljust(64)), curses.color_pair(1))
+                self.stdscr.addstr(13 + i, 10,
+                                   "Pipeline Decode:    "
+                                   + str(Instruction(self.prev_raw_instructions[i]).description().ljust(64)),
+                                   curses.color_pair(1))
             except:
-                self.stdscr.addstr(13 + i, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
+                self.stdscr.addstr(13 + i, 10,
+                                   "Pipeline Decode:    Empty".ljust(72),
+                                   curses.color_pair(1))
             try:
-                self.stdscr.addstr(17 + i, 10, "Pipeline Execute:   " + str(
-                    self.executing[i].description().ljust(64)),
+                self.stdscr.addstr(17 + i, 10,
+                                   "Pipeline Execute:   "
+                                   + str(self.now_executing[i].description().ljust(64)),
                                    curses.color_pair(6))
             except:
-                self.stdscr.addstr(17 + i, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
+                self.stdscr.addstr(17 + i, 10,
+                                   "Pipeline Execute:   Empty".ljust(72),
+                                   curses.color_pair(6))
             try:
-                self.stdscr.addstr(21 + i, 10, "Pipeline Writeback: " + str(
-                    self.writing_back[i].description().ljust(64)),
+                self.stdscr.addstr(21 + i, 10,
+                                   "Pipeline Writeback: "
+                                   + str(self.now_writing[i].description().ljust(64)),
                                    curses.color_pair(5))
             except:
-                self.stdscr.addstr(21 + i, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
-                sleep += 1
+                self.stdscr.addstr(21 + i, 10,
+                                   "Pipeline Writeback: Empty".ljust(72),
+                                   curses.color_pair(5))
         self.reservation_station.print(self.stdscr)
+        self.branch_predictor.print(self.stdscr)
         self.stdscr.refresh()
 
     def setup_screen(self, input_file):
@@ -232,7 +250,7 @@ class Simulator():
         curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
         curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+        curses.init_pair(6, curses.COLOR_CYAN, curses.COLOR_BLACK)
         self.stdscr.addstr(0, 100, "REGISTER FILE", curses.A_BOLD)
         self.stdscr.addstr(0, 10, "MACHINE INFORMATION", curses.A_BOLD)
         self.stdscr.addstr(2, 10, "Program: " + str(input_file), curses.color_pair(4))
@@ -243,8 +261,8 @@ class Simulator():
         """
         Displays the final values of the return registers and does a memory dump.
         """
-        self.stdscr.addstr(26, 0, "Memory Dump:", curses.A_BOLD)
-        self.stdscr.addstr(27, 0, str(self.memory), curses.color_pair(3))
+        self.stdscr.addstr(29, 0, "Memory Dump:", curses.A_BOLD)
+        self.stdscr.addstr(30, 0, str(self.memory), curses.color_pair(3))
         self.stdscr.addstr(4, 100, str(self.register_file[2][:2]), curses.color_pair(3))
         self.stdscr.addstr(5, 100, str(self.register_file[3][:2]), curses.color_pair(3))
         self.stdscr.refresh()
