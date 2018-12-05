@@ -1,4 +1,5 @@
 from classes.opcode import Opcode, Type
+from classes.register_file import RegisterFile
 
 class Instruction():
     """
@@ -18,6 +19,9 @@ class Instruction():
     imm = None
     shift = None
     address = None
+
+    # Define register file to get register names
+    reg = RegisterFile().reg
 
     def __init__(self, instruction):
         """
@@ -47,7 +51,7 @@ class Instruction():
         self._decode_operands()
 
 
-    def description(self, registers):
+    def description(self):
         """
         Returns a print friendly description of the Instruction object.
         :param registers: Register file in use.
@@ -55,14 +59,14 @@ class Instruction():
         """
         if self.type == Type.R:
             return str(self.name) + \
-                   " (rd: " + str(registers[self.rd][0]) + ") " \
-                   "(rs: " + str(registers[self.rs][0]) + ") " \
-                   "(rt: " + str(registers[self.rt][0]) + ") " \
+                   " (rd: " + str(self.reg[self.rd][0]) + ") " \
+                   "(rs: " + str(self.reg[self.rs][0]) + ") " \
+                   "(rt: " + str(self.reg[self.rt][0]) + ") " \
                    "(shift: " + str(self.shift) + ")"
         elif self.type == Type.I:
             return str(self.name) + \
-                   " (rs: " + str(registers[self.rs][0]) + ") " \
-                   "(rt: " + str(registers[self.rt][0]) + ") " \
+                   " (rs: " + str(self.reg[self.rs][0]) + ") " \
+                   "(rt: " + str(self.reg[self.rt][0]) + ") " \
                    "(imm: " + str(self.imm) + ")"
         elif self.type == Type.J:
             return str(self.name) + \

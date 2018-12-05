@@ -24,8 +24,9 @@ class Simulator():
         self.memory = pickle.load(f)
         self.pc = pickle.load(f)
         f.close()
-        # Set the internal clock and define a global register file.
+        # Set the internal clock, total number of instructions executed and define a global register file.
         self.clock = 0
+        self.instructions_executed = 0
         self.register_file = RegisterFile().reg
         self.register_file[29][1] = (max(self.memory) + 1) + (1000 * 4)  # Initialise the stack pointer (1000 words).
         # Define some execution units able to execute instructions in a superscalar manner.
@@ -96,6 +97,7 @@ class Simulator():
                     pc = self.slave_eu.execute(instruction, bypass, queue)
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
                     raise AlreadyExecutingInstruction("Dispatcher Failed...")
+            self.instructions_executed += 1
             if instruction.name in ["beq", "bne", "blez", "bgtz", "jr"] and pc != instruction.prediction:
                 self.branch_predictor.incorrect_predictions += 1
                 self.reservation_station.clear()
@@ -113,12 +115,7 @@ class Simulator():
         This function writes back the pending results from the EUs to the register file.
         :param queue: queue of writebacks.
         """
-        sleep = False
-        if queue is not None:
-            sleep = True
-            queue.commit(self.register_file, self.stdscr)
-        if sleep and not debug:
-            time.sleep(instruction_time)
+        queue.commit(self.register_file, self.stdscr)
 
 
     def simulate(self):
@@ -152,12 +149,13 @@ class Simulator():
         if not debug:
             self.stdscr.addstr(26, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
         # Fetch Stage in Pipeline
-        pipeline[self.clock]["fetch"] = self.fetch()
+        if len(self.reservation_station.queue) <= 12:
+            pipeline[self.clock]["fetch"] = self.fetch()
         # Execute Stage in Pipeline
         pipeline[self.clock]["execute"] = self.execute(pipeline, pipeline[self.clock - 1]["execute"])
         # Decode Stage in Pipeline & Display All
         if pipeline[self.clock - 1]["fetch"] != [None for _ in range(N)]:
-            pipeline[self.clock]["decode"] = self.decode(pipeline[self.clock - 1]["fetch"])
+            self.decode(pipeline[self.clock - 1]["fetch"])
         # Writeback stage in pipeline
         if pipeline[self.clock - 1]["execute"] is not None:
             self.writeback(pipeline[self.clock - 1]["execute"])
@@ -172,8 +170,9 @@ class Simulator():
         """
         if not debug:
             self.stdscr.addstr(26, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
-        pipeline[self.clock]["fetch"] = [None, None]
-        pipeline[self.clock]["decode"] = [None, None]
+        pipeline[self.clock]["fetch"] = [None, None, None, None] # Clear anything already fetched.
+        pipeline[self.clock-1]["fetch"] = [None, None, None, None] # Clear anything about to be decoded.
+        pipeline[self.clock]["decode"] = [None, None, None, None] # Clear anything decoded already.
 
 
     def print_state(self, pipeline):
@@ -184,7 +183,8 @@ class Simulator():
         sleep = 0
         self.stdscr.addstr(3, 10, "Program Counter: " + str(self.pc), curses.color_pair(2))
         self.stdscr.addstr(4, 10, "Clock Cycles Taken: " + str(self.clock), curses.color_pair(3))
-        self.stdscr.addstr(5, 10, "Branch Prediction Rate: " +
+        self.stdscr.addstr(5, 10, "Instructions Per Cycle: " + str(round(self.instructions_executed/self.clock, 2)), curses.color_pair(3))
+        self.stdscr.addstr(6, 10, "Branch Prediction Rate: " +
                            str(
                                round((
                                                  self.branch_predictor.total_predictions - self.branch_predictor.incorrect_predictions) / self.branch_predictor.total_predictions * 100,
@@ -195,36 +195,33 @@ class Simulator():
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i % 20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
-        # for i in range(4):
-            # try:
-            #     self.stdscr.addstr(9 + i, 10, "Pipeline Fetch:     " + str(
-            #         Instruction(pipeline[self.clock]["fetch"][i]).description(self.register_file).ljust(64)),
-            #                        curses.color_pair(4))
-            # except:
-            #     self.stdscr.addstr(9 + i, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
-            # try:
-            #     self.stdscr.addstr(13 + i, 10, "Pipeline Decode:    " + str(
-            #         pipeline[self.clock]["decode"][i].description(self.register_file).ljust(64)), curses.color_pair(1))
-            # except:
-            #     self.stdscr.addstr(13 + i, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
-            # try:
-            #     self.stdscr.addstr(17 + i, 10, "Pipeline Execute:   " + str(
-            #         pipeline[self.clock - 1]["decode"][i].description(self.register_file).ljust(64)),
-            #                        curses.color_pair(6))
-            # except:
-            #     self.stdscr.addstr(17 + i, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
-            # try:
-            #     self.stdscr.addstr(21 + i, 10, "Pipeline Writeback: " + str(
-            #         pipeline[self.clock - 2]["decode"][i].description(self.register_file).ljust(64)),
-            #                        curses.color_pair(5))
-            # except:
-            #     self.stdscr.addstr(21 + i, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
-            #     sleep += 1
+        for i in range(4):
+            try:
+                self.stdscr.addstr(9 + i, 10, "Pipeline Fetch:     " + str(
+                    Instruction(pipeline[self.clock]["fetch"][i]).description().ljust(64)),
+                                   curses.color_pair(4))
+            except:
+                self.stdscr.addstr(9 + i, 10, "Pipeline Fetch:     Empty".ljust(72), curses.color_pair(4))
+            try:
+                self.stdscr.addstr(13 + i, 10, "Pipeline Decode:    " + str(
+                    pipeline[self.clock]["decode"][i].description().ljust(64)), curses.color_pair(1))
+            except:
+                self.stdscr.addstr(13 + i, 10, "Pipeline Decode:    Empty".ljust(72), curses.color_pair(1))
+            try:
+                self.stdscr.addstr(17 + i, 10, "Pipeline Execute:   " + str(
+                    self.executing[i].description().ljust(64)),
+                                   curses.color_pair(6))
+            except:
+                self.stdscr.addstr(17 + i, 10, "Pipeline Execute:   Empty".ljust(72), curses.color_pair(6))
+            try:
+                self.stdscr.addstr(21 + i, 10, "Pipeline Writeback: " + str(
+                    self.writing_back[i].description().ljust(64)),
+                                   curses.color_pair(5))
+            except:
+                self.stdscr.addstr(21 + i, 10, "Pipeline Writeback: Empty".ljust(72), curses.color_pair(5))
+                sleep += 1
         self.reservation_station.print(self.stdscr)
         self.stdscr.refresh()
-        time.sleep(instruction_time)
-        # if sleep == 2:
-        #     time.sleep(instruction_time)  # Need to account for no writeback pause.
 
     def setup_screen(self, input_file):
         """

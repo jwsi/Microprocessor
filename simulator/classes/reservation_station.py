@@ -70,16 +70,26 @@ class ReservationStation:
         reads = [[] for _ in range(4)]
         for i in range(min(4, len(self.queue))):  # Add read dependencies
             instruction = self.queue[i]["instruction"]
-            if instruction.type == Type.I:
-                reads[i].append(instruction.rs)
-            elif instruction.type == Type.R:
-                if instruction.name == "mfhi":
+            # Dependency rules for R type instructions
+            if instruction.type == Type.R:
+                if instruction.name == "jr":
+                    reads[i].append(instruction.rs)
+                elif instruction.name == "mfhi":
                     reads[i].append(32)
                 elif instruction.name == "mflo":
                     reads[i].append(33)
+                elif instruction.name in ["sll", "sra"]:
+                    reads[i].append(instruction.rt)
                 else:
                     reads[i].append(instruction.rs)
                     reads[i].append(instruction.rt)
+            # Dependency rules for I type instructions
+            elif instruction.type == Type.I and instruction.name != "lui":
+                if instruction.name in ["beq", "bne", "sw"]:
+                    reads[i].append(instruction.rs)
+                    reads[i].append(instruction.rt)
+                else:
+                    reads[i].append(instruction.rs)
             reads[i] = [i for i in reads[i] if (i != 0 and i is not None)]  # Remove irrelevant reads
         return reads
 
@@ -92,16 +102,21 @@ class ReservationStation:
         writebacks = [[] for _ in range(4)]
         for i in range(min(4, len(self.queue))):  # Add writeback dependencies
             instruction = self.queue[i]["instruction"]
-            if instruction.type == Type.I:
-                writebacks[i].append(instruction.rt)
-            elif instruction.type == Type.R:
+            if instruction.type == Type.R:
                 if instruction.name == "mult": # Special case for MULT
                     writebacks[i].append(33)
                 elif instruction.name == "div": # Special case for DIV
                     writebacks[i].append(33)
                     writebacks[i].append(32)
+                elif instruction.name == "jr":
+                    pass
                 else:
                     writebacks[i].append(instruction.rd)
+            elif instruction.type == Type.I:
+                if instruction.name in ["beq", "bgtz", "blez", "bne", "sw"]:
+                    pass
+                else:
+                    writebacks[i].append(instruction.rt)
             elif instruction.type == Type.J:
                 if instruction.name == "jal": # Special case for JAL
                     writebacks[i].append(31)
@@ -140,11 +155,11 @@ class ReservationStation:
         Prints the contents of the reservation station to the terminal.
         :param stdscr: terminal to print to.
         """
-        stdscr.addstr(2, 150, "RESERVATION STATION".ljust(56), curses.color_pair(3))
-        stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(56), curses.color_pair(3))
-        for i in range(30):
-            stdscr.addstr(4 + i, 150, "".ljust(50))
-        for i in range(len(self.queue)):
-            stdscr.addstr(4 + i, 150, self.queue[i]["instruction"].name.ljust(50), curses.color_pair(3))
+        stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.color_pair(3))
+        stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(3))
+        for i in range(16):
+            stdscr.addstr(4 + i, 150, "".ljust(48))
+        for i in range(min(16, len(self.queue))):
+            stdscr.addstr(4 + i, 150, self.queue[i]["instruction"].description().ljust(48), curses.color_pair(6))
 
 

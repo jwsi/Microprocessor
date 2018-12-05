@@ -75,9 +75,14 @@ class RegisterFile():
                     stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
         if not debug:
             stdscr.refresh()
+            time.sleep(instruction_time)
 
 
     def no_writebacks(self):
+        """
+        Checks that there are no pending writebacks to the main register file.
+        :return: Boolean representing pending writeback status.
+        """
         for reg in self.reg:
             if self.reg[reg][2]:
                 return False
