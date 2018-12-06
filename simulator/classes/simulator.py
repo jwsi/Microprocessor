@@ -199,6 +199,10 @@ class Simulator():
                            "Instructions Per Cycle: "
                            + str(round(self.instructions_executed/self.clock, 2)),
                            curses.color_pair(3))
+        self.stdscr.addstr(5, 40,
+                           "Instructions Executed: "
+                           + str(self.instructions_executed),
+                           curses.color_pair(3))
         for i in range(34):
             offset = 100
             if i > 20:
