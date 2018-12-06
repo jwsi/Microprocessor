@@ -131,6 +131,7 @@ class Simulator():
         self.exec_results = RegisterFile() # Blank register files.
         self.prev_exec_results = RegisterFile()
         self.now_executing, self.now_writing = [], []
+        final_check = 0
         while True:
             self.clock += 1
             self.advance_pipeline()
@@ -140,7 +141,11 @@ class Simulator():
             finished &= len(self.reservation_station.queue) == 0 # Nothing to execute
             finished &= self.prev_exec_results.no_writebacks() # Nothing to writeback
             if finished:
-                raise Interrupt()
+                final_check += 1
+                if final_check == 2:
+                    raise Interrupt()
+            else:
+                final_check = 0
 
 
     def advance_pipeline(self):
