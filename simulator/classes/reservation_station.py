@@ -1,5 +1,6 @@
 from classes.instruction import Type
 import curses
+from classes.constants import N
 
 class ReservationStation:
     """
@@ -19,7 +20,7 @@ class ReservationStation:
         """
         self._update_dependencies()
         instructions = []
-        for _ in range(4):
+        for _ in range(N):
             try:
                 if self.queue[0]["ready"]:
                     instructions.append(self.queue.pop(0)["instruction"])
@@ -51,12 +52,12 @@ class ReservationStation:
         """
         This function will update the dependencies of the pending next step instructions.
         """
-        for i in range(min(4, len(self.queue))):
+        for i in range(min(N, len(self.queue))):
             self.queue[i]["ready"] = True # Clear previous dependencies
         reads = self._get_reads()
         writes = self._get_writebacks()
-        for i in range(min(4, len(self.queue))): # Set dependencies based on reads and writes
-            for j in range(i+1, min(4, len(self.queue))):
+        for i in range(min(N, len(self.queue))): # Set dependencies based on reads and writes
+            for j in range(i+1, min(N, len(self.queue))):
                 if set(writes[i]) & set(reads[j]):
                     self.queue[j]["ready"] = False
         self._hardware_limitation()
@@ -67,8 +68,8 @@ class ReservationStation:
         This function calculates the read registers for pending next step instructions.
         :return: List of read registers.
         """
-        reads = [[] for _ in range(4)]
-        for i in range(min(4, len(self.queue))):  # Add read dependencies
+        reads = [[] for _ in range(N)]
+        for i in range(min(N, len(self.queue))):  # Add read dependencies
             instruction = self.queue[i]["instruction"]
             # Dependency rules for R type instructions
             if instruction.type == Type.R:
@@ -99,8 +100,8 @@ class ReservationStation:
         This function calculates the writeback registers for pending next step instructions.
         :return: List of writeback registers.
         """
-        writebacks = [[] for _ in range(4)]
-        for i in range(min(4, len(self.queue))):  # Add writeback dependencies
+        writebacks = [[] for _ in range(N)]
+        for i in range(min(N, len(self.queue))):  # Add writeback dependencies
             instruction = self.queue[i]["instruction"]
             if instruction.type == Type.R:
                 if instruction.name == "mult": # Special case for MULT
@@ -131,7 +132,7 @@ class ReservationStation:
         lsu_list = ["lw", "sw"]
         beu_list = ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]
         lsu_instructions, beu_instructions, alu_instructions = [], [], []
-        for i in range(min(4, len(self.queue))):
+        for i in range(min(N, len(self.queue))):
             instruction = self.queue[i]["instruction"]
             if instruction.name in lsu_list and self.queue[i]["ready"]:
                 lsu_instructions.append(i)

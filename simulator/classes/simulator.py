@@ -1,13 +1,12 @@
-import pickle, curses, copy, time
+import pickle, curses
 from classes.instruction import Instruction
 from classes.execution_unit import ExecutionUnit
 from classes.register_file import RegisterFile
-from classes.constants import debug, instruction_time
+from classes.constants import debug, instruction_time, N
 from classes.errors import Interrupt, AlreadyExecutingInstruction, UnsupportedInstruction
 from classes.branch_predictor import BranchPredictor
 from classes.reservation_station import ReservationStation
 
-N = 4 # Define N to represent an n-way superscalar design.
 
 class Simulator():
     """
@@ -205,7 +204,7 @@ class Simulator():
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i % 20 + 2, offset, str(self.register_file[i][:2]).ljust(16))
-        for i in range(4):
+        for i in range(N):
             try:
                 self.stdscr.addstr(9 + i, 10,
                                    "Pipeline Fetch:     "
@@ -216,30 +215,30 @@ class Simulator():
                                    "Pipeline Fetch:     Empty".ljust(72),
                                    curses.color_pair(4))
             try:
-                self.stdscr.addstr(13 + i, 10,
+                self.stdscr.addstr(9 + N + i, 10,
                                    "Pipeline Decode:    "
                                    + str(Instruction(self.prev_raw_instructions[i]).description().ljust(64)),
                                    curses.color_pair(1))
             except:
-                self.stdscr.addstr(13 + i, 10,
+                self.stdscr.addstr(9 + N + i, 10,
                                    "Pipeline Decode:    Empty".ljust(72),
                                    curses.color_pair(1))
             try:
-                self.stdscr.addstr(17 + i, 10,
+                self.stdscr.addstr(9 + 2*N + i, 10,
                                    "Pipeline Execute:   "
                                    + str(self.now_executing[i].description().ljust(64)),
                                    curses.color_pair(6))
             except:
-                self.stdscr.addstr(17 + i, 10,
+                self.stdscr.addstr(9 + 2*N + i, 10,
                                    "Pipeline Execute:   Empty".ljust(72),
                                    curses.color_pair(6))
             try:
-                self.stdscr.addstr(21 + i, 10,
+                self.stdscr.addstr(9 + 3*N + i, 10,
                                    "Pipeline Writeback: "
                                    + str(self.now_writing[i].description().ljust(64)),
                                    curses.color_pair(5))
             except:
-                self.stdscr.addstr(21 + i, 10,
+                self.stdscr.addstr(9 + 3*N + i, 10,
                                    "Pipeline Writeback: Empty".ljust(72),
                                    curses.color_pair(5))
         self.reservation_station.print(self.stdscr)
