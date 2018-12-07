@@ -62,6 +62,7 @@ class ReOrderBuffer:
     def clear_after(self, rob_entry):
         """
         Clears all instructions after a ROB entry.
-        :param rob_entry:
-        :return:
+        :param rob_entry: Last entry to consider valid.
         """
+        for i in range(rob_entry+1, len(self.queue)):
+            del self.queue[i]
