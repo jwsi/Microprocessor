@@ -2,47 +2,46 @@ import curses, time
 from classes.constants import instruction_time, debug
 
 class RegisterFile():
-
-
     def __init__(self):
         """
         Constructor for the Register File class.
         """
         self.reg = {
-            0: ["zero", 0, False],
-            1: ["at", 0, False],
-            2: ["v0", 0, False],
-            3: ["v1", 0, False],
-            4: ["a0", 0, False],
-            5: ["a1", 0, False],
-            6: ["a2", 0, False],
-            7: ["a3", 0, False],
-            8: ["t0", 0, False],
-            9: ["t1", 0, False],
-            10: ["t2", 0, False],
-            11: ["t3", 0, False],
-            12: ["t4", 0, False],
-            13: ["t5", 0, False],
-            14: ["t6", 0, False],
-            15: ["t7", 0, False],
-            16: ["s0", 0, False],
-            17: ["s1", 0, False],
-            18: ["s2", 0, False],
-            19: ["s3", 0, False],
-            20: ["s4", 0, False],
-            21: ["s5", 0, False],
-            22: ["s6", 0, False],
-            23: ["s7", 0, False],
-            24: ["t8", 0, False],
-            25: ["t9", 0, False],
-            26: ["k0", 0, False],
-            27: ["k1", 0, False],
-            28: ["gp", 0, False],
-            29: ["sp", 0, False],
-            30: ["fp", 0, False],
-            31: ["ra", 0, False],
-            32: ["hi", 0, False],
-            33: ["lo", 0, False]
+            # Register_Number : [NAME, VALUE, VALID, ROB_ENTRY]
+            0:  {"name" : "zero", "value" : 0, "valid" : True, "rob_entry" : None},
+            1:  {"name" : "at", "value" : 0, "valid" : True, "rob_entry" : None},
+            2:  {"name" : "v0", "value" : 0, "valid" : True, "rob_entry" : None},
+            3:  {"name" : "v1", "value" : 0, "valid" : True, "rob_entry" : None},
+            4:  {"name" : "a0", "value" : 0, "valid" : True, "rob_entry" : None},
+            5:  {"name" : "a1", "value" : 0, "valid" : True, "rob_entry" : None},
+            6:  {"name" : "a2", "value" : 0, "valid" : True, "rob_entry" : None},
+            7:  {"name" : "a3", "value" : 0, "valid" : True, "rob_entry" : None},
+            8:  {"name" : "t0", "value" : 0, "valid" : True, "rob_entry" : None},
+            9:  {"name" : "t1", "value" : 0, "valid" : True, "rob_entry" : None},
+            10: {"name" : "t2", "value" : 0, "valid" : True, "rob_entry" : None},
+            11: {"name" : "t3", "value" : 0, "valid" : True, "rob_entry" : None},
+            12: {"name" : "t4", "value" : 0, "valid" : True, "rob_entry" : None},
+            13: {"name" : "t5", "value" : 0, "valid" : True, "rob_entry" : None},
+            14: {"name" : "t6", "value" : 0, "valid" : True, "rob_entry" : None},
+            15: {"name" : "t7", "value" : 0, "valid" : True, "rob_entry" : None},
+            16: {"name" : "s0", "value" : 0, "valid" : True, "rob_entry" : None},
+            17: {"name" : "s1", "value" : 0, "valid" : True, "rob_entry" : None},
+            18: {"name" : "s2", "value" : 0, "valid" : True, "rob_entry" : None},
+            19: {"name" : "s3", "value" : 0, "valid" : True, "rob_entry" : None},
+            20: {"name" : "s4", "value" : 0, "valid" : True, "rob_entry" : None},
+            21: {"name" : "s5", "value" : 0, "valid" : True, "rob_entry" : None},
+            22: {"name" : "s6", "value" : 0, "valid" : True, "rob_entry" : None},
+            23: {"name" : "s7", "value" : 0, "valid" : True, "rob_entry" : None},
+            24: {"name" : "t8", "value" : 0, "valid" : True, "rob_entry" : None},
+            25: {"name" : "t9", "value" : 0, "valid" : True, "rob_entry" : None},
+            26: {"name" : "k0", "value" : 0, "valid" : True, "rob_entry" : None},
+            27: {"name" : "k1", "value" : 0, "valid" : True, "rob_entry" : None},
+            28: {"name" : "gp", "value" : 0, "valid" : True, "rob_entry" : None},
+            29: {"name" : "sp", "value" : 0, "valid" : True, "rob_entry" : None},
+            30: {"name" : "fp", "value" : 0, "valid" : True, "rob_entry" : None},
+            31: {"name" : "ra", "value" : 0, "valid" : True, "rob_entry" : None},
+            32: {"name" : "hi", "value" : 0, "valid" : True, "rob_entry" : None},
+            33: {"name" : "lo", "value" : 0, "valid" : True, "rob_entry" : None}
         }
 
 
@@ -54,28 +53,27 @@ class RegisterFile():
         """
         if register_number == 0: # Cannot write to zero'th register
             return
-        self.reg[register_number][1] = value # Update register value in queue
-        self.reg[register_number][2] = True # Mark as dirty
+        self.reg[register_number]["value"] = value # Update register value in queue
 
 
-    def commit(self, register_file, stdscr):
-        """
-        Commit the changes of the queue into the main register_file.
-        Also displays the register updates to the screen in green.
-        :param register_file: register file to commit changes to.
-        """
-        for register, contents in self.reg.items():
-            if contents[2]:
-                offset = 100
-                if register > 20:
-                    offset += 20
-                register_file[register][1] = contents[1]
-                contents[2] = False
-                if not debug:
-                    stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
-        if not debug:
-            stdscr.refresh()
-            time.sleep(instruction_time)
+    # def commit(self, register_file, stdscr):
+    #     """
+    #     Commit the changes of the queue into the main register_file.
+    #     Also displays the register updates to the screen in green.
+    #     :param register_file: register file to commit changes to.
+    #     """
+    #     for register, contents in self.reg.items():
+    #         if not contents["valid"]:
+    #             offset = 100
+    #             if register > 20:
+    #                 offset += 20
+    #             register_file[register]["value"] = contents["value"]
+    #             contents[2] = True
+    #             if not debug:
+    #                 stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
+    #     if not debug:
+    #         stdscr.refresh()
+    #         time.sleep(instruction_time)
 
 
     def no_writebacks(self):
@@ -84,6 +82,19 @@ class RegisterFile():
         :return: Boolean representing pending writeback status.
         """
         for reg in self.reg:
-            if self.reg[reg][2]:
+            if not self.reg[reg]["valid"]:
                 return False
         return True
+
+
+    def get_value(self, register):
+        """
+        Returns the value located in the register one wishes to lookup.
+        If the register is not valid a ROB entry id is returned instead.
+        :param register: The register to access.
+        :return: Boolean representing whether the register is valid,
+        and a value representing the raw value or the ROB entry id.
+        """
+        if self.reg[register]["valid"]:
+            return True, self.reg[register]["value"]
+        return False, self.reg[register]["rob_entry"]

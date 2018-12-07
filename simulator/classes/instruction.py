@@ -12,13 +12,22 @@ class Instruction():
     name = None
     type = None
 
-    # Potential operands of instruction
+    # Real register names in instruction
     rs = None
     rt = None
     rd = None
+
+    # Operands of instruction
+    operands = None # rs & rt at runtime.
     imm = None
     shift = None
     address = None
+
+    # ROB entry id of instruction
+    rob_entry = None
+
+    # Register to writeback to
+    writeback_reg = None
 
     # Define register file to get register names
     reg = RegisterFile().reg

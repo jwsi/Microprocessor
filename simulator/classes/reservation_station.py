@@ -6,11 +6,12 @@ class ReservationStation:
     """
     Reservation station class to store instructions pending execution.
     """
-    def __init__(self):
+    def __init__(self, reorder_buffer):
         """
         Constructor for the reservation station class.
         """
         self.queue = []
+        self.reorder_buffer = reorder_buffer
 
 
     def get_ready_instructions(self):
@@ -37,8 +38,27 @@ class ReservationStation:
         """
         self.queue.append({
             "instruction" : instruction,
-            "ready" : True
+            "ready" : self._calculate_readyness(instruction)
         })
+
+
+    def _calculate_readyness(self, instruction):
+        """
+        Given an instruction, this function will determine if it is ready to be executed.
+        :param instruction: Instruction to determine readyness of.
+        :return: Boolean representing whether instruction is ready to be executed.
+        """
+        valid_rs = False
+        valid_rt = False
+        if instruction.operands["rs"] == {} or instruction.operands["rs"]["valid"]:
+            valid_rs = True
+        elif self.reorder_buffer.queue[instruction.operands["rs"]["value"]]["ready"]:
+            valid_rs = True
+        if instruction.operands["rt"] == {} or instruction.operands["rt"]["valid"]:
+            valid_rt = True
+        elif self.reorder_buffer.queue[instruction.operands["rt"]["value"]]["ready"]:
+            valid_rt = True
+        return valid_rs & valid_rt
 
 
     def clear(self):
@@ -50,79 +70,11 @@ class ReservationStation:
 
     def _update_dependencies(self):
         """
-        This function will update the dependencies of the pending next step instructions.
+        This function will update the dependencies of the pending instructions.
         """
-        for i in range(min(N, len(self.queue))):
-            self.queue[i]["ready"] = True # Clear previous dependencies
-        reads = self._get_reads()
-        writes = self._get_writebacks()
-        for i in range(min(N, len(self.queue))): # Set dependencies based on reads and writes
-            for j in range(i+1, min(N, len(self.queue))):
-                if set(writes[i]) & set(reads[j]):
-                    self.queue[j]["ready"] = False
+        for item in self.queue:
+            item["ready"] = self._calculate_readyness(item["instruction"]) # Clear previous dependencies
         self._hardware_limitation()
-
-
-    def _get_reads(self):
-        """
-        This function calculates the read registers for pending next step instructions.
-        :return: List of read registers.
-        """
-        reads = [[] for _ in range(N)]
-        for i in range(min(N, len(self.queue))):  # Add read dependencies
-            instruction = self.queue[i]["instruction"]
-            # Dependency rules for R type instructions
-            if instruction.type == Type.R:
-                if instruction.name == "jr":
-                    reads[i].append(instruction.rs)
-                elif instruction.name == "mfhi":
-                    reads[i].append(32)
-                elif instruction.name == "mflo":
-                    reads[i].append(33)
-                elif instruction.name in ["sll", "sra"]:
-                    reads[i].append(instruction.rt)
-                else:
-                    reads[i].append(instruction.rs)
-                    reads[i].append(instruction.rt)
-            # Dependency rules for I type instructions
-            elif instruction.type == Type.I and instruction.name != "lui":
-                if instruction.name in ["beq", "bne", "sw"]:
-                    reads[i].append(instruction.rs)
-                    reads[i].append(instruction.rt)
-                else:
-                    reads[i].append(instruction.rs)
-            reads[i] = [i for i in reads[i] if (i != 0 and i is not None)]  # Remove irrelevant reads
-        return reads
-
-
-    def _get_writebacks(self):
-        """
-        This function calculates the writeback registers for pending next step instructions.
-        :return: List of writeback registers.
-        """
-        writebacks = [[] for _ in range(N)]
-        for i in range(min(N, len(self.queue))):  # Add writeback dependencies
-            instruction = self.queue[i]["instruction"]
-            if instruction.type == Type.R:
-                if instruction.name == "mult": # Special case for MULT
-                    writebacks[i].append(33)
-                elif instruction.name == "div": # Special case for DIV
-                    writebacks[i].append(33)
-                    writebacks[i].append(32)
-                elif instruction.name == "jr":
-                    pass
-                else:
-                    writebacks[i].append(instruction.rd)
-            elif instruction.type == Type.I:
-                if instruction.name in ["beq", "bgtz", "blez", "bne", "sw"]:
-                    pass
-                else:
-                    writebacks[i].append(instruction.rt)
-            elif instruction.type == Type.J:
-                if instruction.name == "jal": # Special case for JAL
-                    writebacks[i].append(31)
-            writebacks[i] = [i for i in writebacks[i] if (i != 0 and i is not None)] # Remove irrelevant writebacks
-        return writebacks
 
 
     def _hardware_limitation(self):
