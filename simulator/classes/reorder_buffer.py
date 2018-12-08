@@ -124,7 +124,7 @@ class ReOrderBuffer:
         This prints the re-order buffer to the terminal provided.
         :param stdscr: Terminal to print the re-order buffer to.
         """
-        stdscr.addstr(23, 100, "REORDER BUFFER".ljust(48), curses.color_pair(7))
+        stdscr.addstr(23, 100, "REORDER BUFFER".ljust(48), curses.color_pair(5))
         for i in range(26):
             stdscr.addstr(25 + i, 100, "".ljust(72))
         display = {}
@@ -149,5 +149,5 @@ class ReOrderBuffer:
             stdscr.addstr(25 + i, 100,
                           "id: " + str(key) + " r: " + prefix_r + " w: " + prefix_w +
                           display[key]["instruction"].description().ljust(56),
-                          curses.color_pair(7))
+                          curses.color_pair(5))
             i += 1

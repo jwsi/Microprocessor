@@ -1,6 +1,5 @@
     .data
     .text
 main:
-    addi $t1, $zero, 2    # Load address of a into t1
-    addi $t2, $t1, 3      # Load address of b into t2
-    sll $zero, $zero, 0
+    addi $v0, $v1, 2    # Load address of a into t1
+    addi $v1, $zero, 8

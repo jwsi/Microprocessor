@@ -359,8 +359,8 @@ class Simulator():
         """
         Displays the final values of the return registers and does a memory dump.
         """
-        self.stdscr.addstr(28, 0, "EXECUTION COMPLETE!", curses.A_BOLD)
-        self.stdscr.addstr(29, 0, "See memory dump at ./memory.out")
+        self.stdscr.addstr(48, 10, "EXECUTION COMPLETE!", curses.A_BOLD)
+        self.stdscr.addstr(49, 10, "See memory dump at ./memory.out")
         f = open("./memory.out", "wb")
         f.write(str(self.memory).encode('utf-8'))
         f.close()
