@@ -34,9 +34,9 @@ class Simulator():
         self.slave_eu = ExecutionUnit(self.memory, self.register_file, alu=True, lsu=False, beu=False)
         # Define a branch predictor to optimise the global pipeline.
         self.branch_predictor = BranchPredictor()
-        # Define a re-order buffer for register renaming
+        # Define a re-order buffer for register renaming and out of order execution.
         self.reorder_buffer = ReOrderBuffer()
-        # Define a reservation station to allow for dispatch of instructions
+        # Define a reservation station to allow for dispatch of instructions.
         self.reservation_station = ReservationStation(self.reorder_buffer)
         self.stdscr = stdscr  # Define the curses terminal
         if not debug:
@@ -192,6 +192,7 @@ class Simulator():
                 self.branch_predictor.incorrect_predictions += 1
                 self.reservation_station.clear()
                 self.reorder_buffer.clear_after(instruction.rob_entry)
+                self.register_file.set_all_valid()
                 self.flush_pipeline()
                 self.pc = pc
                 break
@@ -233,7 +234,7 @@ class Simulator():
             finished = self.raw_instructions == empty_state # Nothing fetched
             finished &= self.prev_raw_instructions == empty_state # Nothing to decode
             finished &= len(self.reservation_station.queue) == 0 # Nothing to execute
-            finished &= self.prev_exec_results.no_writebacks() # Nothing to writeback
+            finished &= self.reorder_buffer.no_writebacks() # Nothing to writeback
             if finished:
                 final_check += 1
                 if final_check == 2:

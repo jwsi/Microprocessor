@@ -9,7 +9,7 @@ class ReOrderBuffer:
         Constructor for the Re-Order Buffer class.
         """
         self.queue = { # Define a dictionary representing the re-order buffer queue
-            # ID : { "ready" : status, "instruction" : ins, "result" : execution_result }
+            # ID : { "ready" : w, "instruction" : x, "result" : { y }, "written" : z }
         }
 
 
@@ -66,3 +66,14 @@ class ReOrderBuffer:
         """
         for i in range(rob_entry+1, len(self.queue)):
             del self.queue[i]
+
+
+    def no_writebacks(self):
+        """
+        Checks if there are any pending writebacks in the re-order buffer.
+        :return: Boolean representing whether writebacks are pending.
+        """
+        for key, value in self.queue.items():
+            if not value["written"]:
+                return False
+        return True

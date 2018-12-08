@@ -56,24 +56,13 @@ class RegisterFile():
         self.reg[register_number]["value"] = value # Update register value in queue
 
 
-    # def commit(self, register_file, stdscr):
-    #     """
-    #     Commit the changes of the queue into the main register_file.
-    #     Also displays the register updates to the screen in green.
-    #     :param register_file: register file to commit changes to.
-    #     """
-    #     for register, contents in self.reg.items():
-    #         if not contents["valid"]:
-    #             offset = 100
-    #             if register > 20:
-    #                 offset += 20
-    #             register_file[register]["value"] = contents["value"]
-    #             contents[2] = True
-    #             if not debug:
-    #                 stdscr.addstr(register%20 + 2, offset, str(self.reg[register][:2]).ljust(16), curses.color_pair(1))
-    #     if not debug:
-    #         stdscr.refresh()
-    #         time.sleep(instruction_time)
+    def set_all_valid(self):
+        """
+        Sets all registers in register file to be valid.
+        This is useful in a branch prediction failure.
+        """
+        for key in self.reg.keys():
+            self.reg[key]["valid"] = True
 
 
     def no_writebacks(self):
