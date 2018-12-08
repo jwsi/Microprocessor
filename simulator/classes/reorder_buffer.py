@@ -1,5 +1,6 @@
 from classes.constants import N
 from classes.errors import ResultNotReady
+import curses
 
 class ReOrderBuffer:
     """
@@ -116,3 +117,37 @@ class ReOrderBuffer:
         :param rob_entry: ROB entry to mark.
         """
         self.queue[rob_entry]["written"] = True
+
+
+    def print(self, stdscr):
+        """
+        This prints the re-order buffer to the terminal provided.
+        :param stdscr: Terminal to print the re-order buffer to.
+        """
+        stdscr.addstr(23, 100, "REORDER BUFFER".ljust(48), curses.color_pair(7))
+        for i in range(26):
+            stdscr.addstr(25 + i, 100, "".ljust(72))
+        display = {}
+        for key in self.queue.keys():
+            try:
+                if self.queue[key+10]["ready"] and self.queue[key+10]["written"]:
+                    continue
+            except KeyError:
+                pass
+            if len(display) < 26:
+                display[key] = self.queue[key]
+        i = 0
+        for key in display.keys():
+            if display[key]["ready"]:
+                prefix_r = "\u2713 "
+            else:
+                prefix_r = "\u002E "
+            if display[key]["written"]:
+                prefix_w = "\u2713 "
+            else:
+                prefix_w = "\u002E "
+            stdscr.addstr(25 + i, 100,
+                          "id: " + str(key) + " r: " + prefix_r + " w: " + prefix_w +
+                          display[key]["instruction"].description().ljust(56),
+                          curses.color_pair(7))
+            i += 1

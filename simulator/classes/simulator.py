@@ -77,7 +77,7 @@ class Simulator():
         if len(self.reservation_station.queue) <= 12:
             self.raw_instructions = self.fetch()
         # Writeback stage in pipeline
-        self.writeback()
+        written_to = self.writeback()
         # Execute Stage in Pipeline
         self.execute()
         # Decode Stage in Pipeline
@@ -85,7 +85,7 @@ class Simulator():
             self.decode(self.prev_raw_instructions)
 
         if not debug:
-            self.print_state()
+            self.print_state(written_to)
         self.prev_raw_instructions, self.raw_instructions = self.raw_instructions, [None for _ in range(N)]
         self.now_writing = self.now_executing
 
@@ -232,10 +232,14 @@ class Simulator():
         """
         This function writes back the pending results from the EUs to the register file.
         :param queue: queue of writebacks.
+        :return: List of registers written to in the architectural register file.
         """
         instructions = self.reorder_buffer.get_finished_instructions()
+        written_to = []
         for instruction in instructions:
-            self.register_file.write(instruction, self.reorder_buffer)
+            written_to += self.register_file.write(instruction, self.reorder_buffer)
+        return written_to
+
 
 
     def flush_pipeline(self):
@@ -249,9 +253,10 @@ class Simulator():
         self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
 
 
-    def print_state(self):
+    def print_state(self, written_to):
         """
         This function prints the current state of the simulator to the terminal
+        :param written_to: List of registers written to in this cycle.
         """
         self.stdscr.addstr(3, 10,
                            "Program Counter: "
@@ -272,11 +277,20 @@ class Simulator():
         for i in range(34):
             offset = 100
             if i > 20:
-                offset += 20
+                offset += 25
+            color = 4
+            if i in written_to:
+                color = 1
+            if self.register_file.reg[i]["valid"]:
+                valid = "\u2713"
+            else:
+                valid = "\u002E"
             self.stdscr.addstr(i % 20 + 2, offset,
-                               str(self.register_file.reg[i]["name"]) + ", " +
-                               str(self.register_file.reg[i]["valid"]) + ", " +
-                               str(self.register_file.reg[i]["value"]).ljust(16))
+                               str(self.register_file.reg[i]["name"]) + " v: " +
+                               valid + " " +
+                               str(self.register_file.reg[i]["value"]) + " rob: " +
+                               str(self.register_file.reg[i]["rob_entry"]).ljust(16),
+                               curses.color_pair(color))
         for i in range(N):
             try:
                 self.stdscr.addstr(9 + i, 10,
@@ -316,6 +330,7 @@ class Simulator():
                                    curses.color_pair(5))
         self.reservation_station.print(self.stdscr)
         self.branch_predictor.print(self.stdscr)
+        self.reorder_buffer.print(self.stdscr)
         self.stdscr.refresh()
         import time
         time.sleep(instruction_time)
@@ -325,12 +340,14 @@ class Simulator():
         """
         Sets up the curses terminal with the appropriate colour scheme.
         """
+        curses.init_color(curses.COLOR_MAGENTA, 999, 0, 600)
         curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
         curses.init_pair(4, curses.COLOR_WHITE, curses.COLOR_BLACK)
         curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         curses.init_pair(6, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(7, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
         self.stdscr.addstr(0, 100, "REGISTER FILE", curses.A_BOLD)
         self.stdscr.addstr(0, 10, "MACHINE INFORMATION", curses.A_BOLD)
         self.stdscr.addstr(2, 10, "Program: " + str(input_file), curses.color_pair(4))
@@ -342,17 +359,20 @@ class Simulator():
         """
         Displays the final values of the return registers and does a memory dump.
         """
-        self.stdscr.addstr(28, 0, "Memory Dump:", curses.A_BOLD)
-        self.stdscr.addstr(29, 0, str(self.memory), curses.color_pair(3))
+        self.stdscr.addstr(28, 0, "EXECUTION COMPLETE!", curses.A_BOLD)
+        self.stdscr.addstr(29, 0, "See memory dump at ./memory.out")
+        f = open("./memory.out", "wb")
+        f.write(str(self.memory).encode('utf-8'))
+        f.close()
         self.stdscr.addstr(4, 100,
-                           str(self.register_file.reg[2]["name"]) + ", " +
-                           str(self.register_file.reg[2]["valid"]) + ", " +
-                           str(self.register_file.reg[2]["value"]),
+                           str(self.register_file.reg[2]["name"]) + " v: \u2713 " +
+                           str(self.register_file.reg[2]["value"]) + " rob: " +
+                           str(self.register_file.reg[2]["rob_entry"]),
                            curses.color_pair(3))
         self.stdscr.addstr(5, 100,
-                           str(self.register_file.reg[3]["name"]) + ", " +
-                           str(self.register_file.reg[3]["valid"]) + ", " +
-                           str(self.register_file.reg[3]["value"]),
+                           str(self.register_file.reg[3]["name"]) + " v: \u2713 " +
+                           str(self.register_file.reg[3]["value"]) + " rob: " +
+                           str(self.register_file.reg[3]["rob_entry"]),
                            curses.color_pair(3))
         self.stdscr.refresh()
         exit(0)

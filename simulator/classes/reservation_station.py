@@ -111,8 +111,15 @@ class ReservationStation:
         stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.color_pair(6))
         stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(6))
         for i in range(16):
-            stdscr.addstr(4 + i, 150, "".ljust(48))
+            stdscr.addstr(4 + i, 150, "".ljust(52))
         for i in range(min(16, len(self.queue))):
-            stdscr.addstr(4 + i, 150, self.queue[i]["instruction"].description().ljust(48), curses.color_pair(6))
+            if self.queue[i]["ready"]:
+                prefix = "\u2713 "
+            else:
+                prefix = "\u002E "
+            stdscr.addstr(4 + i, 150,
+                          "r: " + prefix +
+                          self.queue[i]["instruction"].description().ljust(48),
+                          curses.color_pair(6))
 
 

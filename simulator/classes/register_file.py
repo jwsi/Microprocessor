@@ -49,14 +49,20 @@ class RegisterFile():
         """
         Write a finished ROB item back to the register file.
         :param rob_instruction: register number to update.
+        :param rob: re-order buffer to use.
+        :param stdscr: terminal to writeback to.
+        :return: List of registers written to.
         """
+        written_to = []
         for register, value in rob_instruction["result"].items():
             if register == 0: # Cannot write to zero'th register
                 continue
             self.reg[register]["value"] = value
             if self.reg[register]["rob_entry"] == rob_instruction["instruction"].rob_entry:
                 self.reg[register]["valid"] = True
+            written_to.append(register)
         rob.mark_written(rob_instruction["instruction"].rob_entry)
+        return written_to
 
 
     def set_all_valid(self):
