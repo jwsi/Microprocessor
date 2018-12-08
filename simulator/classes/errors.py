@@ -24,3 +24,10 @@ class AlreadyExecutingInstruction(Exception):
     This Exception is raised when a subunit of an execution unit is already busy trying to execute an instruction.
     """
     pass
+
+
+class ResultNotReady(Exception):
+    """
+    This Exception is raised when a result is asked for in a ROB entry that is not yet ready.
+    """
+    pass

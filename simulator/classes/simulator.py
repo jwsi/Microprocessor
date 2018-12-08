@@ -43,6 +43,53 @@ class Simulator():
             self.setup_screen(input_file)  # Setup the initial curses layout
 
 
+    def simulate(self):
+        """
+        The main simulate function controlling the:
+        fetch, decode, execute and writeback.
+        """
+        empty_state = [None for _ in range(N)]
+        self.raw_instructions = empty_state
+        self.prev_raw_instructions = empty_state
+        self.exec_results = RegisterFile() # Blank register files.
+        self.prev_exec_results = RegisterFile()
+        self.now_executing, self.now_writing = [], []
+        while True:
+            self.clock += 1
+            self.advance_pipeline()
+            # Check if program is finished.
+            finished = self.raw_instructions == empty_state # Nothing fetched
+            finished &= self.prev_raw_instructions == empty_state # Nothing to decode
+            finished &= len(self.reservation_station.queue) == 0 # Nothing to execute
+            finished &= self.reorder_buffer.no_writebacks() # Nothing to writeback
+            if finished:
+                raise Interrupt()
+
+
+    def advance_pipeline(self):
+        """
+        This function will advance the pipeline by one stage.
+        :param pipeline: Pipeline to be advanced.
+        """
+        if not debug:
+            self.stdscr.addstr(26, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
+        # Fetch Stage in Pipeline
+        if len(self.reservation_station.queue) <= 12:
+            self.raw_instructions = self.fetch()
+        # Writeback stage in pipeline
+        self.writeback()
+        # Execute Stage in Pipeline
+        self.execute()
+        # Decode Stage in Pipeline
+        if self.prev_raw_instructions != [None for _ in range(N)]:
+            self.decode(self.prev_raw_instructions)
+
+        if not debug:
+            self.print_state()
+        self.prev_raw_instructions, self.raw_instructions = self.raw_instructions, [None for _ in range(N)]
+        self.now_writing = self.now_executing
+
+
     def fetch(self):
         """
         This function fetches the appropriate instruction from memory.
@@ -80,95 +127,75 @@ class Simulator():
                 instructions.append(decoded_instruction)
                 key = self.reorder_buffer.insert_entry(decoded_instruction)
                 decoded_instruction.rob_entry = key
-                operands = self.get_operands(decoded_instruction)
+                operands = self._get_operands(decoded_instruction)
                 decoded_instruction.operands = operands
-                self.rename_analysis(decoded_instruction, key)
+                self._writeback_analysis(decoded_instruction, key)
                 self.reservation_station.add_instruction(decoded_instruction)
             else:
                 instructions.append(None)
         return instructions
 
 
-    def get_operands(self, instruction):
+    def _get_operands(self, ins):
         """
         Given an instruction, this function will calculate the operands required for execution.
-        This will overwrite existing operands in the instruction object.
-        :param instruction: Instruction to calculate operands for.
+        :param ins: Instruction to calculate operands for.
         :return: Dictionary of operands.
         """
-        if instruction.rs is not None:
-            rs_valid, rs_value = self.register_file.get_value(instruction.rs)
-        if instruction.rt is not None:
-            rt_valid, rt_value = self.register_file.get_value(instruction.rt)
         operands = {
             "rs" : {},
             "rt" : {}
         }
-        if instruction.type == Type.R:
-            if instruction.name == "jr":
-                operands["rs"]["valid"] = rs_valid
-                operands["rs"]["value"] = rs_value
-            elif instruction.name == "mfhi":
-                rs_valid, rs_value = self.register_file.get_value(32)
-                operands["rs"]["valid"] = rs_valid
-                operands["rs"]["value"] = rs_value
-                instruction.rs = 32
-            elif instruction.name == "mflo":
-                rs_valid, rs_value = self.register_file.get_value(33)
-                operands["rs"]["valid"] = rs_valid
-                operands["rs"]["value"] = rs_value
-                instruction.rs = 33
-            elif instruction.name in ["sll", "sra"]:
-                operands["rt"]["valid"] = rt_valid
-                operands["rt"]["value"] = rt_value
+        # Type R operands.
+        if ins.type == Type.R:
+            if ins.name == "jr":
+                operands["rs"]["valid"], operands["rs"]["value"] = self.register_file.get_value(ins.rs)
+            elif ins.name == "mfhi":
+                operands["rs"]["valid"], operands["rs"]["value"] = self.register_file.get_value(32)
+                ins.rs = 32
+            elif ins.name == "mflo":
+                operands["rs"]["valid"], operands["rs"]["value"] = self.register_file.get_value(33)
+                ins.rs = 33
+            elif ins.name in ["sll", "sra"]:
+                operands["rt"]["valid"], operands["rt"]["value"] = self.register_file.get_value(ins.rt)
             else:
-                operands["rs"]["valid"] = rs_valid
-                operands["rs"]["value"] = rs_value
-                operands["rt"]["valid"] = rt_valid
-                operands["rt"]["value"] = rt_value
-        elif instruction.type == Type.I and instruction.name != "lui":
-            if instruction.name in ["beq", "bne", "sw"]:
-                operands["rs"]["valid"] = rs_valid
-                operands["rs"]["value"] = rs_value
-                operands["rt"]["valid"] = rt_valid
-                operands["rt"]["value"] = rt_value
+                operands["rs"]["valid"], operands["rs"]["value"] = self.register_file.get_value(ins.rs)
+                operands["rt"]["valid"], operands["rt"]["value"] = self.register_file.get_value(ins.rt)
+        # Type I operands.
+        elif ins.type == Type.I and ins.name != "lui":
+            if ins.name in ["beq", "bne", "sw"]:
+                operands["rs"]["valid"], operands["rs"]["value"] = self.register_file.get_value(ins.rs)
+                operands["rt"]["valid"], operands["rt"]["value"] = self.register_file.get_value(ins.rt)
             else:
-                operands["rs"]["valid"] = rs_valid
-                operands["rs"]["value"] = rs_value
+                operands["rs"]["valid"], operands["rs"]["value"] = self.register_file.get_value(ins.rs)
         return operands
 
 
-    def rename_analysis(self, instruction, key):
+    def _writeback_analysis(self, ins, key):
         """
         Given an instruction and a key this function will rename the architectural register file
         in order to resolve dependencies.
-        :param instruction: Instruction to inspect.
+        :param ins: Instruction to inspect.
         :param key: Re-order buffer entry id.
         """
-        if instruction.type == Type.R:
-            if instruction.name == "mult":  # Special case for MULT
-                self.register_file.reg[33]["valid"] = False
-                self.register_file.reg[33]["rob_entry"] = key
-            elif instruction.name == "div":  # Special case for DIV
-                self.register_file.reg[33]["valid"] = False
-                self.register_file.reg[33]["rob_entry"] = key
-                self.register_file.reg[32]["valid"] = False
-                self.register_file.reg[32]["rob_entry"] = key
-            elif instruction.name == "jr":
+        if ins.type == Type.R:
+            if ins.name == "mult":  # Special case for MULT
+                self.register_file.invalidate_register(33, key)
+            elif ins.name == "div":  # Special case for DIV
+                self.register_file.invalidate_register(33, key)
+                self.register_file.invalidate_register(32, key)
+            elif ins.name == "jr":
                 pass
             else:
-                self.register_file.reg[instruction.rd]["valid"] = False
-                self.register_file.reg[instruction.rd]["rob_entry"] = key
-        elif instruction.type == Type.I:
-            if instruction.name in ["beq", "bgtz", "blez", "bne", "sw"]:
+                self.register_file.invalidate_register(ins.rd, key)
+        elif ins.type == Type.I:
+            if ins.name in ["beq", "bgtz", "blez", "bne", "sw"]:
                 pass
             else:
-                self.register_file.reg[instruction.rt]["valid"] = False
-                self.register_file.reg[instruction.rt]["rob_entry"] = key
-        elif instruction.type == Type.J:
-            if instruction.name == "jal":  # Special case for JAL
-                self.register_file.reg[31]["valid"] = False
-                self.register_file.reg[31]["rob_entry"] = key
+                self.register_file.invalidate_register(ins.rt, key)
+        elif ins.type == Type.J:
+            if ins.name == "jal":  # Special case for JAL
+                self.register_file.invalidate_register(31, key)
 
 
     def execute(self):
@@ -208,65 +235,7 @@ class Simulator():
         """
         instructions = self.reorder_buffer.get_finished_instructions()
         for instruction in instructions:
-            for register in instruction["result"]:
-                self.register_file.write(register, instruction["result"][register])
-                if self.register_file.reg[register]["rob_entry"] == instruction["instruction"].rob_entry:
-                    self.register_file.reg[register]["valid"] = True # Only valid if most up to date value.
-            self.reorder_buffer.queue[instruction["instruction"].rob_entry]["written"] = True
-
-
-    def simulate(self):
-        """
-        The main simulate function controlling the:
-        fetch, decode, execute and writeback.
-        """
-        empty_state = [None for _ in range(N)]
-        self.raw_instructions = empty_state
-        self.prev_raw_instructions = empty_state
-        self.exec_results = RegisterFile() # Blank register files.
-        self.prev_exec_results = RegisterFile()
-        self.now_executing, self.now_writing = [], []
-        final_check = 0
-        while True:
-            self.clock += 1
-            self.advance_pipeline()
-            # Check if program is finished.
-            finished = self.raw_instructions == empty_state # Nothing fetched
-            finished &= self.prev_raw_instructions == empty_state # Nothing to decode
-            finished &= len(self.reservation_station.queue) == 0 # Nothing to execute
-            finished &= self.reorder_buffer.no_writebacks() # Nothing to writeback
-            if finished:
-                final_check += 1
-                if final_check == 2:
-                    raise Interrupt()
-            else:
-                final_check = 0
-
-
-    def advance_pipeline(self):
-        """
-        This function will advance the pipeline by one stage.
-        :param pipeline: Pipeline to be advanced.
-        """
-        if not debug:
-            self.stdscr.addstr(26, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
-        # Fetch Stage in Pipeline
-        if len(self.reservation_station.queue) <= 12:
-            self.raw_instructions = self.fetch()
-        # Execute Stage in Pipeline
-        self.execute()
-        # Decode Stage in Pipeline & Display All
-        if self.prev_raw_instructions != [None for _ in range(N)]:
-            self.decode(self.prev_raw_instructions)
-        if not debug:
-            self.print_state()
-        # Writeback stage in pipeline
-        self.writeback()
-
-        self.prev_raw_instructions, self.raw_instructions = self.raw_instructions, [None for _ in range(N)]
-        for instruction in self.now_executing:
-            self.reorder_buffer.queue[instruction.rob_entry]["ready"] = True
-        self.now_writing = self.now_executing
+            self.register_file.write(instruction, self.reorder_buffer)
 
 
     def flush_pipeline(self):
@@ -278,6 +247,7 @@ class Simulator():
             self.stdscr.addstr(26, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
         self.raw_instructions = [None for _ in range(N)] # Clear anything already fetched.
         self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
+
 
     def print_state(self):
         """
@@ -304,9 +274,9 @@ class Simulator():
             if i > 20:
                 offset += 20
             self.stdscr.addstr(i % 20 + 2, offset,
-                               str(self.register_file[i]["name"]) + ", " +
-                               str(self.register_file[i]["valid"]) + ", " +
-                               str(self.register_file[i]["value"]).ljust(16))
+                               str(self.register_file.reg[i]["name"]) + ", " +
+                               str(self.register_file.reg[i]["valid"]) + ", " +
+                               str(self.register_file.reg[i]["value"]).ljust(16))
         for i in range(N):
             try:
                 self.stdscr.addstr(9 + i, 10,
@@ -347,6 +317,8 @@ class Simulator():
         self.reservation_station.print(self.stdscr)
         self.branch_predictor.print(self.stdscr)
         self.stdscr.refresh()
+        import time
+        time.sleep(instruction_time)
 
 
     def setup_screen(self, input_file):
@@ -372,7 +344,15 @@ class Simulator():
         """
         self.stdscr.addstr(28, 0, "Memory Dump:", curses.A_BOLD)
         self.stdscr.addstr(29, 0, str(self.memory), curses.color_pair(3))
-        self.stdscr.addstr(4, 100, str(self.register_file[2][:2]), curses.color_pair(3))
-        self.stdscr.addstr(5, 100, str(self.register_file[3][:2]), curses.color_pair(3))
+        self.stdscr.addstr(4, 100,
+                           str(self.register_file.reg[2]["name"]) + ", " +
+                           str(self.register_file.reg[2]["valid"]) + ", " +
+                           str(self.register_file.reg[2]["value"]),
+                           curses.color_pair(3))
+        self.stdscr.addstr(5, 100,
+                           str(self.register_file.reg[3]["name"]) + ", " +
+                           str(self.register_file.reg[3]["valid"]) + ", " +
+                           str(self.register_file.reg[3]["value"]),
+                           curses.color_pair(3))
         self.stdscr.refresh()
         exit(0)

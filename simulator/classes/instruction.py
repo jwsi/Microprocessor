@@ -68,14 +68,14 @@ class Instruction():
         """
         if self.type == Type.R:
             return str(self.name) + \
-                   " (rd: " + str(self.reg[self.rd][0]) + ") " \
-                   "(rs: " + str(self.reg[self.rs][0]) + ") " \
-                   "(rt: " + str(self.reg[self.rt][0]) + ") " \
+                   " (rd: " + str(self.reg[self.rd]["name"]) + ") " + \
+                   "(rs: " + str(self.reg[self.rs]["name"]) + ") " + \
+                   "(rt: " + str(self.reg[self.rt]["name"]) + ") " + \
                    "(shift: " + str(self.shift) + ")"
         elif self.type == Type.I:
             return str(self.name) + \
-                   " (rs: " + str(self.reg[self.rs][0]) + ") " \
-                   "(rt: " + str(self.reg[self.rt][0]) + ") " \
+                   " (rs: " + str(self.reg[self.rs]["name"]) + ") " + \
+                   "(rt: " + str(self.reg[self.rt]["name"]) + ") " + \
                    "(imm: " + str(self.imm) + ")"
         elif self.type == Type.J:
             return str(self.name) + \

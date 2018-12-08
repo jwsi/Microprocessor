@@ -45,15 +45,18 @@ class RegisterFile():
         }
 
 
-    def write(self, register_number, value):
+    def write(self, rob_instruction, rob):
         """
-        Write a value to the register update queue.
-        :param register_number: register number to update.
-        :param value: value to update register with.
+        Write a finished ROB item back to the register file.
+        :param rob_instruction: register number to update.
         """
-        if register_number == 0: # Cannot write to zero'th register
-            return
-        self.reg[register_number]["value"] = value # Update register value in queue
+        for register, value in rob_instruction["result"].items():
+            if register == 0: # Cannot write to zero'th register
+                continue
+            self.reg[register]["value"] = value
+            if self.reg[register]["rob_entry"] == rob_instruction["instruction"].rob_entry:
+                self.reg[register]["valid"] = True
+        rob.mark_written(rob_instruction["instruction"].rob_entry)
 
 
     def set_all_valid(self):
@@ -87,3 +90,15 @@ class RegisterFile():
         if self.reg[register]["valid"]:
             return True, self.reg[register]["value"]
         return False, self.reg[register]["rob_entry"]
+
+
+    def invalidate_register(self, register, rob_entry):
+        """
+        Invalidates a register and updates the rob_entry.
+        :param register: Register to invalidate.
+        :param rob_entry: ROB entry to link to.
+        """
+        if register == 0:
+            return
+        self.reg[register]["valid"] = False
+        self.reg[register]["rob_entry"] = rob_entry

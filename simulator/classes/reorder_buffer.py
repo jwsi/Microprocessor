@@ -1,4 +1,5 @@
 from classes.constants import N
+from classes.errors import ResultNotReady
 
 class ReOrderBuffer:
     """
@@ -77,3 +78,41 @@ class ReOrderBuffer:
             if not value["written"]:
                 return False
         return True
+
+
+    def get_result(self, rob_entry, register):
+        """
+        Gets the result for a register in a particular ROB entry.
+        :param rob_entry: Entry to get result from.
+        :param register: Register in the result dictionary one wishes to obtain.
+        :return: Value of register selected.
+        """
+        if self.queue[rob_entry]["ready"]:
+            return self.queue[rob_entry]["result"][register]
+        raise ResultNotReady("Result is not yet ready for ROB entry: " + str(rob_entry))
+
+
+    def write_result(self, rob_entry, register, result):
+        """
+        Writes the result for an instruction to an entry in the ROB.
+        :param rob_entry: ROB entry to write the result to.
+        :param register: Register to which the result belongs.
+        :param result: Result of the execution.
+        """
+        self.queue[rob_entry]["result"][register] = result
+
+
+    def mark_ready(self, rob_entry):
+        """
+        Mark a ROB entry as ready.
+        :param rob_entry: ROB entry to mark.
+        """
+        self.queue[rob_entry]["ready"] = True
+
+
+    def mark_written(self, rob_entry):
+        """
+        Mark a ROB entry as written.
+        :param rob_entry: ROB entry to mark.
+        """
+        self.queue[rob_entry]["written"] = True
