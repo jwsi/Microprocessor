@@ -333,6 +333,7 @@ class Simulator():
         self.branch_predictor.print(self.stdscr)
         self.reorder_buffer.print(self.stdscr)
         self.stdscr.refresh()
+        # self.stdscr.getch()
         import time
         time.sleep(instruction_time)
 

@@ -1,6 +1,3 @@
-import curses, time
-from classes.constants import instruction_time, debug
-
 class RegisterFile():
     def __init__(self):
         """

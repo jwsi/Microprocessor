@@ -1,4 +1,4 @@
-from classes.errors import Interrupt, UnsupportedInstruction, AlreadyExecutingInstruction
+from classes.errors import UnsupportedInstruction, AlreadyExecutingInstruction
 from classes.branch_predictor import BranchPredictor
 
 

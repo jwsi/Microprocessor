@@ -63,8 +63,8 @@ class ReOrderBuffer:
 
     def clear_block(self, instruction_block):
         """
-        Clears all instructions after a ROB entry.
-        :param rob_entry: Last entry to consider valid.
+        Clears all instructions after a particular speculative block.
+        :param instruction_block: Instruction block to delete (and all subsequent blocks).
         """
         for i in range(len(self.queue)):
             if self.queue[i]["instruction"].block >= instruction_block:

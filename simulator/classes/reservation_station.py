@@ -1,4 +1,3 @@
-from classes.instruction import Type
 import curses
 from classes.constants import N
 
@@ -63,7 +62,8 @@ class ReservationStation:
 
     def clear_block(self, instruction_block):
         """
-        This function will clear the entire reservation station queue.
+        Clears all instructions after a particular speculative block.
+        :param instruction_block: Instruction block to delete (and all subsequent blocks).
         """
         for i in range(len(self.queue)):
             try:
