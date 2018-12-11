@@ -277,7 +277,7 @@ class Simulator():
                            curses.color_pair(3))
         for i in range(34):
             offset = 100
-            if i > 20:
+            if i >= 20:
                 offset += 25
             color = 4
             if i in written_to:
