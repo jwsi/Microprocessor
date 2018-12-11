@@ -32,6 +32,9 @@ class Instruction():
     # Define register file to get register names
     reg = RegisterFile().reg
 
+    # Speculative block
+    block = None
+
     def __init__(self, instruction):
         """
         Instruction class constructor.

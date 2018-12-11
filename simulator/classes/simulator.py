@@ -36,6 +36,7 @@ class Simulator():
         self.branch_predictor = BranchPredictor()
         # Define a re-order buffer for register renaming and out of order execution.
         self.reorder_buffer = ReOrderBuffer()
+        self.block = 0
         # Define a reservation station to allow for dispatch of instructions.
         self.reservation_station = ReservationStation(self.reorder_buffer)
         self.stdscr = stdscr  # Define the curses terminal
@@ -124,6 +125,9 @@ class Simulator():
         for instruction in fetch_object:
             if instruction is not None:
                 decoded_instruction = Instruction(instruction)
+                if decoded_instruction.name in ["beq", "bgtz", "blez", "bne"]:
+                    self.block += 1
+                decoded_instruction.block = self.block
                 instructions.append(decoded_instruction)
                 key = self.reorder_buffer.insert_entry(decoded_instruction)
                 decoded_instruction.rob_entry = key
@@ -217,8 +221,8 @@ class Simulator():
             self.now_executing.append(instruction)
             if instruction.name in ["beq", "bne", "blez", "bgtz", "jr"] and pc != instruction.prediction:
                 self.branch_predictor.incorrect_predictions += 1
-                self.reservation_station.clear()
-                self.reorder_buffer.clear_after(instruction.rob_entry)
+                self.reservation_station.clear_block(instruction.block)
+                self.reorder_buffer.clear_block(instruction.block)
                 self.register_file.set_all_valid()
                 self.flush_pipeline()
                 self.pc = pc

@@ -21,12 +21,12 @@ class ReservationStation:
         """
         self._update_dependencies()
         instructions = []
-        for _ in range(N):
+        for i in range(len(self.queue)):
             try:
-                if self.queue[0]["ready"]:
-                    instructions.append(self.queue.pop(0)["instruction"])
-                else:
+                if len(instructions) >= N:
                     break
+                while self.queue[i]["ready"]:
+                    instructions.append(self.queue.pop(i)["instruction"])
             except IndexError:
                 break
         return instructions
@@ -61,11 +61,16 @@ class ReservationStation:
         return valid_rs & valid_rt
 
 
-    def clear(self):
+    def clear_block(self, instruction_block):
         """
         This function will clear the entire reservation station queue.
         """
-        self.queue = []
+        for i in range(len(self.queue)):
+            try:
+                while self.queue[i]["instruction"].block >= instruction_block:
+                    del self.queue[i]
+            except IndexError:
+                break
 
 
     def _update_dependencies(self):
@@ -84,7 +89,7 @@ class ReservationStation:
         lsu_list = ["lw", "sw"]
         beu_list = ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]
         lsu_instructions, beu_instructions, alu_instructions = [], [], []
-        for i in range(min(N, len(self.queue))):
+        for i in range(len(self.queue)):
             instruction = self.queue[i]["instruction"]
             if instruction.name in lsu_list and self.queue[i]["ready"]:
                 lsu_instructions.append(i)
@@ -108,6 +113,7 @@ class ReservationStation:
         Prints the contents of the reservation station to the terminal.
         :param stdscr: terminal to print to.
         """
+        self._update_dependencies()
         stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.color_pair(6))
         stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(6))
         for i in range(16):
