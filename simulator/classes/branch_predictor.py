@@ -21,6 +21,7 @@ class BranchPredictor:
     incorrect_predictions = 0
     current_state = State.weakly_taken
     return_address_stack = []
+    block = 0
 
 
     def make_prediction(self, raw_instruction, pc):
@@ -32,6 +33,7 @@ class BranchPredictor:
         if raw_instruction[0:6] in ["000010", "000011"]:
             # If JAL, store the return address on the return address stack.
             if raw_instruction[0:6] == "000011":
+                self.block += 1
                 self.return_address_stack.append(pc + 4)
             pc = int(raw_instruction[6:32], 2)
         # If JR make a prediction about the return address.
@@ -47,6 +49,7 @@ class BranchPredictor:
                 pc += 4 * int(raw_instruction[16:32], 2)
             else:
                 pc += 4
+            self.block += 1
             self.total_predictions += 1
         # For all other instructions increment by 4.
         else:

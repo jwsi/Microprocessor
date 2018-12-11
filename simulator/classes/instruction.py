@@ -42,10 +42,8 @@ class Instruction():
         """
         self.pc = instruction["pc"]
         self.raw_instruction = instruction["raw_instruction"]
-        try:
-            self.prediction = instruction["prediction"] # If there is a predicted pc outcome then store it.
-        except KeyError:
-            self.prediction = None
+        self.block = instruction["block"]
+        self.prediction = instruction["prediction"] # If there is a predicted pc outcome then store it.
         self.decode()
 
 
