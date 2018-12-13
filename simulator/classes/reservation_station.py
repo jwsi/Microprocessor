@@ -128,9 +128,9 @@ class ReservationStation:
         self._update_dependencies()
         stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.A_BOLD)
         stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(6))
-        for i in range(16):
+        for i in range(20):
             stdscr.addstr(4 + i, 150, "".ljust(52))
-        for i in range(min(16, len(self.queue))):
+        for i in range(min(20, len(self.queue))):
             if self.queue[i]["ready"]:
                 prefix = "\u2713 "
             else:

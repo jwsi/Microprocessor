@@ -75,7 +75,7 @@ class Simulator():
         if not debug:
             self.stdscr.addstr(22 + 4 * (N-1), 10, "Pipeline Status: NORMAL".ljust(64), curses.color_pair(1))  # Clear warnings
         # Fetch Stage in Pipeline
-        if len(self.reservation_station.queue) <= 12:
+        if len(self.reservation_station.queue) <= 20-N:
             self.raw_instructions = self.fetch()
         # Writeback stage in pipeline
         written_to = self.writeback()
