@@ -72,7 +72,7 @@ class Simulator():
         :param pipeline: Pipeline to be advanced.
         """
         if not debug:
-            self.stdscr.addstr(29 + 4 * (N - 4), 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
+            self.stdscr.addstr(22 + 4 * (N-1), 10, "Pipeline Status: NORMAL".ljust(64), curses.color_pair(1))  # Clear warnings
         # Fetch Stage in Pipeline
         if len(self.reservation_station.queue) <= 12:
             self.raw_instructions = self.fetch()
@@ -249,7 +249,7 @@ class Simulator():
         :param pipeline: Pipeline to be flushed.
         """
         if not debug:
-            self.stdscr.addstr(29 + 4 * (N - 4), 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
+            self.stdscr.addstr(22 + 4 * (N-1), 10, "Pipeline Status: BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
         self.raw_instructions = [None for _ in range(N)] # Clear anything already fetched.
         self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
 
@@ -294,39 +294,39 @@ class Simulator():
                                curses.color_pair(color))
         for i in range(N):
             try:
-                self.stdscr.addstr(9 + i, 10,
+                self.stdscr.addstr(14 + i, 10,
                                    "Pipeline Fetch:     "
                                    + str(Instruction(self.raw_instructions[i]).description().ljust(64)),
                                    curses.color_pair(4))
             except:
-                self.stdscr.addstr(9 + i, 10,
+                self.stdscr.addstr(14 + i, 10,
                                    "Pipeline Fetch:     Empty".ljust(72),
                                    curses.color_pair(4))
             try:
-                self.stdscr.addstr(9 + N + i + 1, 10,
+                self.stdscr.addstr(14 + N + i + 1, 10,
                                    "Pipeline Decode:    "
                                    + str(Instruction(self.prev_raw_instructions[i]).description().ljust(64)),
                                    curses.color_pair(1))
             except:
-                self.stdscr.addstr(9 + N + i + 1, 10,
+                self.stdscr.addstr(14 + N + i + 1, 10,
                                    "Pipeline Decode:    Empty".ljust(72),
                                    curses.color_pair(1))
             try:
-                self.stdscr.addstr(9 + 2*N + i + 2, 10,
+                self.stdscr.addstr(14 + 2*N + i + 2, 10,
                                    "Pipeline Execute:   "
                                    + str(self.now_executing[i].description().ljust(64)),
                                    curses.color_pair(6))
             except:
-                self.stdscr.addstr(9 + 2*N + i + 2, 10,
+                self.stdscr.addstr(14 + 2*N + i + 2, 10,
                                    "Pipeline Execute:   Empty".ljust(72),
                                    curses.color_pair(6))
             try:
-                self.stdscr.addstr(9 + 3*N + i + 3, 10,
+                self.stdscr.addstr(14 + 3*N + i + 3, 10,
                                    "Pipeline Writeback: "
                                    + str(self.now_writing[i].description().ljust(64)),
                                    curses.color_pair(5))
             except:
-                self.stdscr.addstr(9 + 3*N + i + 3, 10,
+                self.stdscr.addstr(14 + 3*N + i + 3, 10,
                                    "Pipeline Writeback: Empty".ljust(72),
                                    curses.color_pair(5))
         self.reservation_station.print(self.stdscr)
@@ -354,7 +354,7 @@ class Simulator():
         self.stdscr.addstr(0, 10, "MACHINE INFORMATION", curses.A_BOLD)
         self.stdscr.addstr(2, 10, "Program: " + str(input_file), curses.color_pair(4))
         self.stdscr.addstr(4, 35, "Cycles per second: " + str(1 / instruction_time)[:5], curses.color_pair(3))
-        self.stdscr.addstr(7, 10, "PIPELINE INFORMATION", curses.A_BOLD)
+        self.stdscr.addstr(12, 10, "PIPELINE INFORMATION", curses.A_BOLD)
 
 
     def shutdown(self):

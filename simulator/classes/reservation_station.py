@@ -126,7 +126,7 @@ class ReservationStation:
         :param stdscr: terminal to print to.
         """
         self._update_dependencies()
-        stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.color_pair(6))
+        stdscr.addstr(0, 150, "RESERVATION STATION".ljust(48), curses.A_BOLD)
         stdscr.addstr(2, 150, "Pending Instructions: " + str(len(self.queue)).ljust(24), curses.color_pair(6))
         for i in range(16):
             stdscr.addstr(4 + i, 150, "".ljust(52))

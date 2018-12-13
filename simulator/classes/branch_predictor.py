@@ -74,16 +74,17 @@ class BranchPredictor:
         Prints the contents of the reservation station to the terminal.
         :param stdscr: terminal to print to.
         """
-        stdscr.addstr(21, 150, "BRANCH PREDICTOR".ljust(48), curses.color_pair(2))
-        stdscr.addstr(22, 150, "Current State: " + str(self.current_state).ljust(24), curses.color_pair(4))
-        stdscr.addstr(23, 150,
+        stdscr.addstr(7, 10, "BRANCH PREDICTOR".ljust(48), curses.A_BOLD)
+        stdscr.addstr(9, 10,
+                      "Current State:          " + str(self.current_state).ljust(24), curses.color_pair(7))
+        stdscr.addstr(10, 10,
                       "Branch Prediction Rate: " +
                       str(round(
                           (self.total_predictions - self.incorrect_predictions)
                           / self.total_predictions * 100,
                           2))
                       + "%",
-                      curses.color_pair(4))
+                      curses.color_pair(7))
 
 
 

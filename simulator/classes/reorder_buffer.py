@@ -125,7 +125,7 @@ class ReOrderBuffer:
         This prints the re-order buffer to the terminal provided.
         :param stdscr: Terminal to print the re-order buffer to.
         """
-        stdscr.addstr(23, 100, "REORDER BUFFER".ljust(48), curses.color_pair(5))
+        stdscr.addstr(23, 100, "REORDER BUFFER".ljust(48), curses.A_BOLD)
         for i in range(26):
             stdscr.addstr(25 + i, 100, "".ljust(72))
         display = {}
