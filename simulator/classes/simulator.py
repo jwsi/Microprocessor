@@ -1,4 +1,4 @@
-import pickle, curses
+import pickle, curses, time
 from classes.instruction import Instruction, Type
 from classes.execution_unit import ExecutionUnit
 from classes.register_file import RegisterFile
@@ -26,6 +26,7 @@ class Simulator():
         f.close()
         # Set the internal clock, total number of instructions executed and define a global register file.
         self.clock = 0
+        self.intercept = True
         self.instructions_executed = 0
         self.register_file = RegisterFile()
         self.register_file.reg[29]["value"] = (max(self.memory) + 1) + (1000 * 4)  # Initialise the stack pointer (1000 words).
@@ -333,9 +334,11 @@ class Simulator():
         self.branch_predictor.print(self.stdscr)
         self.reorder_buffer.print(self.stdscr)
         self.stdscr.refresh()
-        # self.stdscr.getch()
-        import time
-        time.sleep(instruction_time)
+        if not self.intercept:
+            time.sleep(instruction_time)
+        if self.intercept and self.stdscr.getch() == 32:
+            self.intercept = False
+            self.stdscr.addstr(51, 0, "".ljust(92))
 
 
     def setup_screen(self, input_file):
@@ -355,6 +358,7 @@ class Simulator():
         self.stdscr.addstr(2, 10, "Program: " + str(input_file), curses.color_pair(4))
         self.stdscr.addstr(4, 35, "Cycles per second: " + str(1 / instruction_time)[:5], curses.color_pair(3))
         self.stdscr.addstr(12, 10, "PIPELINE INFORMATION", curses.A_BOLD)
+        self.stdscr.addstr(51, 0, "Press `SPACE' to automate execution or any other key to single step.")
 
 
     def shutdown(self):
