@@ -72,7 +72,7 @@ class Simulator():
         :param pipeline: Pipeline to be advanced.
         """
         if not debug:
-            self.stdscr.addstr(26, 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
+            self.stdscr.addstr(29 + 4 * (N - 4), 10, "".ljust(64), curses.color_pair(2))  # Clear warnings
         # Fetch Stage in Pipeline
         if len(self.reservation_station.queue) <= 12:
             self.raw_instructions = self.fetch()
@@ -249,7 +249,7 @@ class Simulator():
         :param pipeline: Pipeline to be flushed.
         """
         if not debug:
-            self.stdscr.addstr(26, 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
+            self.stdscr.addstr(29 + 4 * (N - 4), 10, "BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
         self.raw_instructions = [None for _ in range(N)] # Clear anything already fetched.
         self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
 
