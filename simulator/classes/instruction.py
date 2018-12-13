@@ -12,6 +12,8 @@ class Instruction():
     name = None
     type = None
 
+    # Define register file to get register names
+    reg = RegisterFile().reg
     # Real register names in instruction
     rs = None
     rt = None
@@ -26,14 +28,11 @@ class Instruction():
     # ROB entry id of instruction
     rob_entry = None
 
-    # Register to writeback to
-    writeback_reg = None
-
-    # Define register file to get register names
-    reg = RegisterFile().reg
-
     # Speculative block
     block = None
+
+    # Number of cycles taken to execute
+    cycles = 1
 
     def __init__(self, instruction):
         """
@@ -58,6 +57,10 @@ class Instruction():
         if opcode == 0:
             function = int(self.raw_instruction[26:32], 2)
         self.name, self.type = Opcode(opcode, function).decode()
+        if self.name in ["lw", "sw"]:
+            self.cycles = 2
+        elif self.name in ["div"]:
+            self.cycles = 3
         self._decode_operands()
 
 

@@ -31,7 +31,11 @@ class ExecutionUnit():
         :param rob: re-order buffer.
         """
         source, target = self._get_operands(ins, rob)
+        new_pc = None
         try:
+            if ins.cycles != 1:
+                ins.cycles -= 1
+                return ins.pc + 4
             # LOAD/STORE
             if ins.name in ["lw", "sw"]:
                 self._check_subunit_status("lsu")
@@ -45,16 +49,18 @@ class ExecutionUnit():
             # Branch operations
             elif ins.name in ["beq", "bne", "blez", "bgtz", "j", "jal", "jr"]:
                 self._check_subunit_status("beu")
-                return self.beu.execute(ins, source, target, rob)
+                new_pc = self.beu.execute(ins, source, target, rob)
+            # Mark the instruction as ready for writeback.
+            ins.cycles -= 1
+            if ins.cycles == 0:
+                rob.mark_ready(ins.rob_entry)
+            if new_pc is not None:
+                return new_pc
             # All instructions bar branch pc += 4
             return ins.pc + 4
         # Catch instructions that cannot be executed by this EU.
         except AttributeError:
             raise UnsupportedInstruction("`" + ins.name + "` on EU: " + str(id(self)))
-        # Mark the instruction as ready for writeback.
-        finally:
-            rob.mark_ready(ins.rob_entry)
-
 
 
     def _get_operands(self, ins, rob):

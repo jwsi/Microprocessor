@@ -87,7 +87,7 @@ class Simulator():
         if not debug:
             self.print_state(written_to)
         self.prev_raw_instructions, self.raw_instructions = self.raw_instructions, [None for _ in range(N)]
-        self.now_writing = self.now_executing
+        self.now_writing = [ins for ins in self.now_executing if ins.cycles == 0 and ins.name != "sw"]
 
 
     def fetch(self):
@@ -303,30 +303,30 @@ class Simulator():
                                    "Pipeline Fetch:     Empty".ljust(72),
                                    curses.color_pair(4))
             try:
-                self.stdscr.addstr(9 + N + i, 10,
+                self.stdscr.addstr(9 + N + i + 1, 10,
                                    "Pipeline Decode:    "
                                    + str(Instruction(self.prev_raw_instructions[i]).description().ljust(64)),
                                    curses.color_pair(1))
             except:
-                self.stdscr.addstr(9 + N + i, 10,
+                self.stdscr.addstr(9 + N + i + 1, 10,
                                    "Pipeline Decode:    Empty".ljust(72),
                                    curses.color_pair(1))
             try:
-                self.stdscr.addstr(9 + 2*N + i, 10,
+                self.stdscr.addstr(9 + 2*N + i + 2, 10,
                                    "Pipeline Execute:   "
                                    + str(self.now_executing[i].description().ljust(64)),
                                    curses.color_pair(6))
             except:
-                self.stdscr.addstr(9 + 2*N + i, 10,
+                self.stdscr.addstr(9 + 2*N + i + 2, 10,
                                    "Pipeline Execute:   Empty".ljust(72),
                                    curses.color_pair(6))
             try:
-                self.stdscr.addstr(9 + 3*N + i, 10,
+                self.stdscr.addstr(9 + 3*N + i + 3, 10,
                                    "Pipeline Writeback: "
                                    + str(self.now_writing[i].description().ljust(64)),
                                    curses.color_pair(5))
             except:
-                self.stdscr.addstr(9 + 3*N + i, 10,
+                self.stdscr.addstr(9 + 3*N + i + 3, 10,
                                    "Pipeline Writeback: Empty".ljust(72),
                                    curses.color_pair(5))
         self.reservation_station.print(self.stdscr)

@@ -25,7 +25,11 @@ class ReservationStation:
                 if len(instructions) >= N:
                     break
                 while self.queue[i]["ready"]:
-                    instructions.append(self.queue.pop(i)["instruction"])
+                    if self.queue[i]["instruction"].cycles > 1:
+                        instructions.append(self.queue[i]["instruction"])
+                        break
+                    else:
+                        instructions.append(self.queue.pop(i)["instruction"])
             except IndexError:
                 break
         return instructions
@@ -57,6 +61,14 @@ class ReservationStation:
             valid_rt = True
         elif self.reorder_buffer.queue[instruction.operands["rt"]["value"]]["ready"]:
             valid_rt = True
+        # Ensure loads and stores are done in order.
+        if instruction.name in ["lw", "sw"]:
+            for item in self.queue:
+                if item["instruction"].name in ["lw", "sw"]:
+                    if item["instruction"] == instruction:
+                        return valid_rs & valid_rt
+                    else:
+                        return False
         return valid_rs & valid_rt
 
 

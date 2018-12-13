@@ -1,5 +1,12 @@
     .data
-    .text
+
+marker: .word 6
+
+    .text # We want to compute a = b + c
+
+# Main invocation point
 main:
-    addi $v0, $v1, 2    # Load address of a into t1
-    addi $v1, $zero, 8
+    addi $t1, $zero, 1
+    addi $t0, $zero, 32
+    sw $t1, $t0
+    lw $t3, marker
