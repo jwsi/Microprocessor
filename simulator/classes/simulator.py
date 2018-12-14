@@ -63,6 +63,7 @@ class Simulator():
             finished &= self.prev_raw_instructions == empty_state # Nothing to decode
             finished &= len(self.reservation_station.queue) == 0 # Nothing to execute
             finished &= self.reorder_buffer.no_writebacks() # Nothing to writeback
+            finished &= not self.branch_predictor.in_recovery
             if finished:
                 raise Interrupt()
 
@@ -73,9 +74,13 @@ class Simulator():
         :param pipeline: Pipeline to be advanced.
         """
         if not debug:
-            self.stdscr.addstr(22 + 4 * (N-1), 10, "Pipeline Status: NORMAL".ljust(64), curses.color_pair(1))  # Clear warnings
+            self.stdscr.addstr(25+ 3 * (N-1), 10, "Pipeline Status: NORMAL".ljust(64), curses.color_pair(1))  # Clear warnings
+        # Check if system has finished recovering from failed branch
+        if self.branch_predictor.in_recovery and self.reorder_buffer.no_writebacks():
+            self.branch_predictor.in_recovery = False
+            self.register_file.set_all_valid()
         # Fetch Stage in Pipeline
-        if len(self.reservation_station.queue) <= 20-N:
+        if not self.branch_predictor.in_recovery and len(self.reservation_station.queue) <= 20-N:
             self.raw_instructions = self.fetch()
         # Writeback stage in pipeline
         written_to = self.writeback()
@@ -84,7 +89,7 @@ class Simulator():
         # Decode Stage in Pipeline
         if self.prev_raw_instructions != [None for _ in range(N)]:
             self.decode(self.prev_raw_instructions)
-
+        # Do prints and prepare for next round
         if not debug:
             self.print_state(written_to)
         self.prev_raw_instructions, self.raw_instructions = self.raw_instructions, [None for _ in range(N)]
@@ -221,7 +226,7 @@ class Simulator():
                 self.branch_predictor.incorrect_predictions += 1
                 self.reservation_station.clear_block(instruction.block)
                 self.reorder_buffer.clear_block(instruction.block)
-                self.register_file.set_all_valid()
+                self.branch_predictor.in_recovery = True
                 self.flush_pipeline()
                 self.pc = pc
                 break
@@ -250,7 +255,7 @@ class Simulator():
         :param pipeline: Pipeline to be flushed.
         """
         if not debug:
-            self.stdscr.addstr(22 + 4 * (N-1), 10, "Pipeline Status: BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
+            self.stdscr.addstr(25+ 3 * (N-1), 10, "Pipeline Status: BRANCH PREDICTION FAILED - FLUSHING PIPELINE".ljust(64), curses.color_pair(2))
         self.raw_instructions = [None for _ in range(N)] # Clear anything already fetched.
         self.prev_raw_instructions = [None for _ in range(N)] # Clear anything about to be decoded.
 
@@ -313,6 +318,16 @@ class Simulator():
                                    "Pipeline Decode:    Empty".ljust(72),
                                    curses.color_pair(1))
             try:
+                self.stdscr.addstr(18 + 2*N + i + 3, 10,
+                                   "Pipeline Writeback: "
+                                   + str(self.now_writing[i].description().ljust(64)),
+                                   curses.color_pair(5))
+            except:
+                self.stdscr.addstr(18 + 2*N + i + 3, 10,
+                                   "Pipeline Writeback: Empty".ljust(72),
+                                   curses.color_pair(5))
+        for i in range(4):
+            try:
                 self.stdscr.addstr(14 + 2*N + i + 2, 10,
                                    "Pipeline Execute:   "
                                    + str(self.now_executing[i].description().ljust(64)),
@@ -321,15 +336,6 @@ class Simulator():
                 self.stdscr.addstr(14 + 2*N + i + 2, 10,
                                    "Pipeline Execute:   Empty".ljust(72),
                                    curses.color_pair(6))
-            try:
-                self.stdscr.addstr(14 + 3*N + i + 3, 10,
-                                   "Pipeline Writeback: "
-                                   + str(self.now_writing[i].description().ljust(64)),
-                                   curses.color_pair(5))
-            except:
-                self.stdscr.addstr(14 + 3*N + i + 3, 10,
-                                   "Pipeline Writeback: Empty".ljust(72),
-                                   curses.color_pair(5))
         self.reservation_station.print(self.stdscr)
         self.branch_predictor.print(self.stdscr)
         self.reorder_buffer.print(self.stdscr)

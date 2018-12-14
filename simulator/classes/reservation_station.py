@@ -22,7 +22,7 @@ class ReservationStation:
         instructions = []
         for i in range(len(self.queue)):
             try:
-                if len(instructions) >= N:
+                if len(instructions) >= 4:
                     break
                 while self.queue[i]["ready"]:
                     if self.queue[i]["instruction"].cycles > 1:

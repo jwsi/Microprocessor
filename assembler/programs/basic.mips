@@ -1,12 +1,21 @@
     .data
 
-marker: .word 6
-
     .text # We want to compute a = b + c
 
 # Main invocation point
 main:
-    addi $t1, $zero, 1
-    addi $t0, $zero, 32
-    sw $t1, $t0
-    lw $t3, marker
+    addi $t5, $zero, 20
+    sll $zero, $zero, 0
+    sll $zero, $zero, 0
+    sll $zero, $zero, 0
+
+    addi $t4, $zero, 5
+    add $t1, $zero, $t4
+
+    beq $t0, $t5, 3
+    addi $t3, $t1, 1
+    j end
+    addi $t1, $zero, 10
+
+end:
+    sll $zero, $zero, 0

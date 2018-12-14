@@ -22,6 +22,7 @@ class BranchPredictor:
     current_state = State.weakly_taken
     return_address_stack = []
     block = 0
+    in_recovery = False
 
 
     def make_prediction(self, raw_instruction, pc):
@@ -76,7 +77,10 @@ class BranchPredictor:
         """
         stdscr.addstr(7, 10, "BRANCH PREDICTOR".ljust(48), curses.A_BOLD)
         stdscr.addstr(9, 10,
-                      "Current State:          " + str(self.current_state).ljust(24), curses.color_pair(7))
+                      "Current State: " +
+                      str(self.current_state) +
+                      ", Recovery Mode: " +
+                      str(self.in_recovery).ljust(24), curses.color_pair(7))
         stdscr.addstr(10, 10,
                       "Branch Prediction Rate: " +
                       str(round(
