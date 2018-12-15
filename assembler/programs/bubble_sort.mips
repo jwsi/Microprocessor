@@ -24,26 +24,26 @@ outer_loop:
     j inner_loop
 
 inner_loop:
-    bne $s1, $s4, 3 # While j < N-i
-    addi $s0, $s0, 4 # increment to next item in array
+    # While j < N-i do the inner loop
+    bne $s1, $s4, 3
+    addi $s0, $s0, 4
     j outer_loop
+    jal swap_check
+    addi $s1, $s1, 4
+    j inner_loop
+
+swap_check:
     addi $t0, $s1, array
     addi $t1, $t0, 4
     lw $t2, $t0
     lw $t3, $t1
     slt $t4, $t3, $t2
     bne $t4, $zero, 2
-    j increment
-    j swap
-
-increment:
-    addi $s1, $s1, 4
-    j inner_loop
-
-swap:
+    jr $ra
     sw $t2, $t1
     sw $t3, $t0
-    j increment
+    jr $ra
 
+# Final no op
 end:
     sll $zero, $zero, 0 # final nop
