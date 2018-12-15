@@ -110,3 +110,7 @@ pip-selfcheck.json
 
 # PyCharm Files
 .idea/
+
+# Simulator Files
+simulator/programs/
+simulator/memory\.out
