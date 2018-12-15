@@ -34,13 +34,16 @@ class BranchPredictor:
         if raw_instruction[0:6] in ["000010", "000011"]:
             # If JAL, store the return address on the return address stack.
             if raw_instruction[0:6] == "000011":
-                self.block += 1
-                self.return_address_stack.append(pc + 4)
+                self.return_address_stack.append({
+                    "prediction" : pc + 4,
+                    "block" : self.block
+                })
             pc = int(raw_instruction[6:32], 2)
         # If JR make a prediction about the return address.
         elif raw_instruction[0:6] == "000000" and raw_instruction[26:32] == "001000":
             try:
-                pc = self.return_address_stack.pop()
+                self.block += 1
+                pc = self.return_address_stack.pop()["prediction"]
             except IndexError: # If unable to make a prediction then fall back to next instruction.
                 pc += 4
             self.total_predictions += 1
@@ -56,6 +59,19 @@ class BranchPredictor:
         else:
             pc += 4
         return pc
+
+
+    def remove_invalid_returns(self, block):
+        """
+        Removes invalid return address predictions after a failed branch has occured.
+        :param block: Block number associated to invalid predictions.
+        """
+        for i in range(len(self.return_address_stack)):
+            try:
+                while self.return_address_stack[i]["block"] >= block:
+                    del self.return_address_stack[i]
+            except IndexError:
+                break
 
 
     @classmethod

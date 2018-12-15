@@ -227,6 +227,7 @@ class Simulator():
                 self.reservation_station.clear_block(instruction.block)
                 self.reorder_buffer.clear_block(instruction.block)
                 self.branch_predictor.in_recovery = True
+                self.branch_predictor.remove_invalid_returns(instruction.block)
                 self.flush_pipeline()
                 self.pc = pc
                 break
