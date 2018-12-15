@@ -1,0 +1,55 @@
+    .data
+
+    .text
+
+# Setup variables
+main:
+    addi $a0, $zero, 7 # Fib number to calculate
+    addi $s0, $zero, 1 # Register to store 1
+    jal fib
+    j end
+
+# Recursive definition of fib
+fib:
+    addi $v0, $zero, 0
+    # Fib 0 = 1
+    bne $a0, $zero, 3
+    addi $v0, $zero, 1
+    jr $ra
+    # Fib 1 = 1
+    bne $a0, $s0, 3
+    addi $v0, $zero, 1
+    jr $ra
+
+    # Call fib of n-1
+    addi $a0, $a0, -1
+    addi $sp, $sp, -12     # Allocate space on stack
+    sw $ra, $sp           # Store ra on stack
+    sw $v0, 4($sp)        # Store v0 on stack
+    sw $a0, 8($sp)        # Store a0 on the stack
+    jal fib               # Jump to the swap_check and set return address.
+    lw $a0, 8($sp)        # Retrieve a0 from the stack
+    lw $t0, 4($sp)        # Retrieve v0 placed on stack.
+    lw $ra, $sp           # Retrieve ra placed on stack.
+    addi $sp, $sp, 12      # Deallocate space on stack.
+
+    add $v0, $v0, $t0
+
+    # Call fib of n-2
+    addi $a0, $a0, -1
+    addi $sp, $sp, -12     # Allocate space on stack
+    sw $ra, $sp           # Store ra on stack
+    sw $v0, 4($sp)        # Store v0 on stack
+    sw $a0, 8($sp)        # Store a0 on the stack
+    jal fib               # Jump to the swap_check and set return address.
+    lw $a0, 8($sp)        # Retrieve a0 from the stack
+    lw $t0, 4($sp)        # Retrieve v0 placed on stack.
+    lw $ra, $sp           # Retrieve ra placed on stack.
+    addi $sp, $sp, 12      # Deallocate space on stack.
+
+    add $v0, $v0, $t0
+    jr $ra
+
+# Exit point
+end:
+    sll $zero, $zero, 0 # Final no-op
