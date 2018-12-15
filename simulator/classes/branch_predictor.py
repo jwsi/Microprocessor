@@ -87,7 +87,7 @@ class BranchPredictor:
                           (self.total_predictions - self.incorrect_predictions)
                           / self.total_predictions * 100,
                           2))
-                      + "%",
+                      + "%".ljust(8),
                       curses.color_pair(7))
 
 
