@@ -41,7 +41,7 @@ class ExecutionUnit():
                 self._check_subunit_status("lsu")
                 self.lsu.execute(ins, source, target, rob)
             # ALU Operations
-            elif ins.name in ["add", "sub" "and", "or","xor", "nor", "slt", "slti",
+            elif ins.name in ["add", "sub", "and", "or", "xor", "nor", "slt", "slti",
                               "addi", "andi", "ori", "xori", "lui", "sll", "sra",
                               "mult", "div", "mfhi", "mflo"]:
                 self._check_subunit_status("alu")
