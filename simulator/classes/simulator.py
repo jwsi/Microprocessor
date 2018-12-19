@@ -220,7 +220,8 @@ class Simulator():
                     pc = self.slave_eu.execute(instruction, self.reorder_buffer)
                 except (AlreadyExecutingInstruction, UnsupportedInstruction):
                     raise AlreadyExecutingInstruction("Dispatcher Failed...")
-            self.instructions_executed += 1
+            if instruction.cycles == 0:
+                self.instructions_executed += 1
             self.now_executing.append(instruction)
             if instruction.name in ["beq", "bne", "blez", "bgtz", "jr"] and pc != instruction.prediction:
                 self.branch_predictor.incorrect_predictions += 1

@@ -4,7 +4,7 @@
 
 # Setup variables
 main:
-    addi $a0, $zero, 4 # Fib number to calculate
+    addi $a0, $zero, 8 # Fib number to calculate
     addi $s0, $zero, 1 # Register to store 1
     jal fib
     j end
