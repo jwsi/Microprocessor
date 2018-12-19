@@ -9,6 +9,7 @@ main:
     addi $s3, $zero, 1 # set k = 1
     addi $s4, $zero, 3 # set n = 3
     addi $s5, $zero, 3 # set l = 3
+    addi $a0, $zero, 9 # set digits to 9
     j loop
 
 loop:
@@ -29,6 +30,11 @@ loop:
 if:
     # move n into v0
     add $v0, $zero, $s4
+
+    # Check if level of accuracy required has been achieved
+    addi $v1, $v1, 1
+    bne $v1, $a0, 2
+    j end
 
     # Calculate nr
     addi $t0, $zero, 10 # set t0 to 10
