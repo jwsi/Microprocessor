@@ -1,0 +1,115 @@
+    .data
+
+    .text
+
+main:
+    addi $s0, $zero, 1 # set q = 1
+    addi $s1, $zero, 0 # set r = 0
+    addi $s2, $zero, 1 # set t = 1
+    addi $s3, $zero, 1 # set k = 1
+    addi $s4, $zero, 3 # set n = 3
+    addi $s5, $zero, 3 # set l = 3
+    j loop
+
+loop:
+    addi $t0, $zero, 4 # set t0 = 4
+    mult $t0, $s0 # multiply 4*q
+    mflo $t0 # set t0 to 4*q
+    add $t0, $t0, $s1 # set t0 to 4*q+r
+    sub $t0, $t0, $s2 # set t0 to 4*q+r-t
+
+    mult $s4, $s2 # multiply n*t
+    mflo $t1 # set t1 to n*t
+
+    slt $t3, $t0, $t1 # set t3 to 1 if t0 < t1
+    beq $t3, $zero, 2
+    j if
+    j else
+
+if:
+    # move n into v0
+    add $v0, $zero, $s4
+
+    # Calculate nr
+    addi $t0, $zero, 10 # set t0 to 10
+    mult $s4, $s2 # multiply n*t
+    mflo $t1 # set t1 to n*t
+    sub $t1, $s1, $t1 # set t1 to r-n*t
+    mult $t0, $t1 # multiply 10*(r-n*t)
+    mflo $s6 # set s6 to 10*(r-n*t)
+
+    # Calculate n
+    addi $t1, $zero, 3 # set t1 to 3
+    mult $t1, $s0 # multiply 3*q
+    mflo $t1 # set t1 to 3*q
+    add $t1, $t1, $s1 # set t1 to 3*q+r
+    mult $t0, $t1 # multiply 10*(3*q+r)
+    mflo $t1 # set t1 to 10*(3*q+r)
+    div $t1, $s2 # divide 10*(3*q+r) by t
+    mflo $t1 # set t1 to 10*(3*q+r)//t
+    mult $t0, $s4 # multiply 10*n
+    mflo $t2 # set t2 to 10*n
+    sub $s4, $t1, $t2 # set s4 to ((10*(3*q+r))//t)-10*n
+
+    # Calculate q
+    mult $t0, $s0 # multiply 10*q
+    mflo $s0 # set $s0 to 10*q
+
+    # Calculate r
+    add $s1, $zero, $s6 # set s1 to nr
+
+    # Temp jump to end
+    j loop
+
+
+
+else:
+    # Calculate nr
+    addi $t0, $zero, 2 # set t0 to 2
+    mult $t0, $s0 # multiply 2*q
+    mflo $t1 # set t1 to 2*q
+    add $t1, $t1, $s1 # set t1 to 2*q+r
+    mult $t1, $s5 # multiply (2*q+r)*l
+    mflo $s6 # set s6 to (2*q+r)*l
+
+    # Calculate nn
+    addi $t1, $zero, 7 # set t1 to 7
+    mult $t1, $s3 # multiply 7*k
+    mflo $t2 # set t2 to 7*k
+    mult $s1, $s5 # multiply r*l
+    mflo $t3 # set t3 to r*l
+    mult $s0, $t2 # multiply q*(7*k)
+    mflo $t2 # set t2 to q*(7*k)
+    add $t2, $t2, $t0 # set t2 to q*(7*k)+2
+    add $t2, $t2, $t3 # set t2 to q*(7*k)+2+(r*l)
+    mult $s2, $s5 # multiply t*l
+    mflo $t3 # set t3 to t*l
+    div $t2, $t3 # divide q*(7*k)+2+(r*l) by (t*l)
+    mflo $s7 # set s7 to q*(7*k)+2+(r*l) // (t*l)
+
+    # Calculate q
+    mult $s0, $s3 # multiply q*k
+    mflo $s0 # set s0 to q*k
+
+    # Calculate t
+    mult $s2, $s5 # multiply t*l
+    mflo $s2 # set s2 to t*l
+
+    # Calculate l
+    addi $s5, $s5, 2 # set s5 to l+2
+
+    # Calculate k
+    addi $s3, $s3, 1 # set s3 to k+1
+
+    # Calculate n
+    add $s4, $zero, $s7 # set s4 to nn
+
+    # Calculate r
+    add $s1, $zero, $s6 # set s1 to nr
+
+    # Temp jump to end
+    j loop
+
+
+end:
+    sll $zero, $zero, 0
