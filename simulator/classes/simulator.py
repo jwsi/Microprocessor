@@ -297,7 +297,7 @@ class Simulator():
             self.stdscr.addstr(i % 20 + 2, offset,
                                str(self.register_file.reg[i]["name"]) + " v: " +
                                valid + " " +
-                               str(self.register_file.reg[i]["value"]) + " rob: " +
+                               str(self.register_file.reg[i]["value"])[:6] + " rob: " +
                                str(self.register_file.reg[i]["rob_entry"]).ljust(16),
                                curses.color_pair(color))
         for i in range(N):
@@ -373,19 +373,21 @@ class Simulator():
         """
         Displays the final values of the return registers and does a memory dump.
         """
-        self.stdscr.addstr(48, 10, "EXECUTION COMPLETE!", curses.A_BOLD)
+        self.stdscr.addstr(46, 10, "EXECUTION COMPLETE!", curses.A_BOLD)
+        self.stdscr.addstr(47, 10, "1st return value: " + str(self.register_file.reg[2]["value"]), curses.color_pair(3))
+        self.stdscr.addstr(48, 10, "2nd return value: " + str(self.register_file.reg[3]["value"]), curses.color_pair(3))
         self.stdscr.addstr(49, 10, "See memory dump at ./memory.out")
         f = open("./memory.out", "wb")
         f.write(str(self.memory).encode('utf-8'))
         f.close()
         self.stdscr.addstr(4, 100,
                            str(self.register_file.reg[2]["name"]) + " v: \u2713 " +
-                           str(self.register_file.reg[2]["value"]) + " rob: " +
+                           str(self.register_file.reg[2]["value"])[:6] + " rob: " +
                            str(self.register_file.reg[2]["rob_entry"]),
                            curses.color_pair(3))
         self.stdscr.addstr(5, 100,
                            str(self.register_file.reg[3]["name"]) + " v: \u2713 " +
-                           str(self.register_file.reg[3]["value"]) + " rob: " +
+                           str(self.register_file.reg[3]["value"])[:6] + " rob: " +
                            str(self.register_file.reg[3]["rob_entry"]),
                            curses.color_pair(3))
         self.stdscr.refresh()
